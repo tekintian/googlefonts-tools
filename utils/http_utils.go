@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"regexp"
 	"strings"
@@ -71,4 +73,15 @@ func GetRemoteIp(r *http.Request) string {
 		return strings.Trim(array[1], "[]")
 	}
 	return r.RemoteAddr
+}
+
+// 生成一个随机IP地址
+func GetFakeIp() string {
+	rand.Seed(time.Now().UnixNano())
+	i1 := rand.Intn(250)
+	//排除内网IP
+	if i1 == 127 || i1 == 10 || i1 == 192 || i1 == 172 || i1 == 0 {
+		i1 = 100 + rand.Intn(150)
+	}
+	return fmt.Sprintf("%d.%d.%d.%d", i1, rand.Intn(250), rand.Intn(250), rand.Intn(250))
 }

@@ -9,6 +9,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/tekintian/googlefonts-tools/utils"
 )
@@ -82,12 +83,16 @@ func (c *googleFontsCtl) Fetch(resp http.ResponseWriter, r *http.Request) {
 	ua := r.Header.Get("User-Agent")
 	ip := utils.GetClientIp(r)
 	if ip == "::1" {
-		ip = "220.181.38.251"
+		ip = utils.GetFakeIp()
 	}
 
 	data, err := utils.HttpGet(reqUrl, ip, ua)
 	if err != nil {
 		c.RespMsg(resp, err.Error())
+		return
+	}
+	if blocked := strings.Contains(string(data), "errors/robot.png"); blocked {
+		c.RespMsg(resp, "当前请求被Google阻止!,请更换浏览器/后缀稍后重试!")
 		return
 	}
 
@@ -141,7 +146,7 @@ func (c *googleFontsCtl) getZipFilename(url, fontName string) string {
 // 获取字体文件,返回网站文件名
 func (c *googleFontsCtl) fetchFont(furl, ip, ua, fontName string) (filename string, fidr string, err error) {
 	fdir := c.getFileDir(furl)
-
+	time.Sleep(100 * time.Microsecond) //休眠100毫秒,防止被K
 	data, err := utils.HttpGet(furl, ip, ua)
 	if err != nil {
 		c.Println(err.Error())
