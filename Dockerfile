@@ -27,6 +27,22 @@ RUN apk add --no-cache gcc make musl-dev git && \
 
 FROM alpine:3.20
 
+ARG APPVERSION=dev
+LABEL maintainer="tekintian <tekintian@gmail.com>" \
+      name="googlefonts-tools" \
+      version="${APPVERSION}" \
+      org.opencontainers.image.authors="tekintian <tekintian@gmail.com>" \
+      org.opencontainers.image.source="https://github.com/tekintian/googlefonts-tools" \
+      org.opencontainers.image.url="https://gf.tekin.cn/" \
+      org.opencontainers.image.documentation="https://github.com/tekintian/googlefonts-tools" \
+      org.opencontainers.image.title="googlefonts-tools (v${APPVERSION})" \
+      org.opencontainers.image.description="Google web fonts download tools" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.version="${APPVERSION}" \
+      org.opencontainers.image.vendor="tekintian" \
+      org.opencontainers.image.base.name="alpine:3.20" \
+      org.opencontainers.image.keywords="google-fonts,download,web-fonts,envsubst,async,notify,docker"
+
 WORKDIR /app
 COPY --from=builder /googlefonts-tools .
 COPY --from=envsubst-builder /usr/local/bin/envsubst /usr/local/bin/envsubst
