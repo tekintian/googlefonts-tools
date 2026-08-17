@@ -15,6 +15,8 @@ env:
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.VERSION }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,12 +30,15 @@ jobs:
 
       - name: Get Version
         id: version
-        run: echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Debug: VERSION=${VERSION}"
 
       - name: Build
         run: |
           APP=googlefonts-tools
-          VERSION=${{ steps.version.VERSION }}
+          VERSION=${{ steps.version.outputs.VERSION }}
           DIST=dist
 
           PLATFORMS=(
@@ -59,7 +64,7 @@ jobs:
       - name: Package
         run: |
           APP=googlefonts-tools
-          VERSION=${{ steps.version.VERSION }}
+          VERSION=${{ steps.version.outputs.VERSION }}
           DIST=dist
           PACKAGE=release
 
@@ -93,9 +98,9 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: ${{ steps.version.VERSION }}
+          name: ${{ steps.version.outputs.VERSION }}
           draft: false
-          prerelease: ${{ contains(steps.version.VERSION, '-') }}
+          prerelease: ${{ contains(steps.version.outputs.VERSION, '-') }}
           generate_release_notes: true
           files: |
             release/*.tar.gz
@@ -109,9 +114,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Get Version
-        id: version
-        run: echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+      - name: Get Version and Owner
+        id: meta
+        run: |
+          VERSION="${{ needs.release.outputs.version }}"
+          if [ -z "$VERSION" ]; then
+            VERSION="${GITHUB_REF_NAME}"
+          fi
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "OWNER=${OWNER}" >> $GITHUB_OUTPUT
+          echo "Debug: VERSION=${VERSION} OWNER=${OWNER}"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -133,7 +146,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           build-args: |
-            APPVERSION=${{ steps.version.VERSION }}
+            APPVERSION=${{ steps.meta.outputs.VERSION }}
           tags: |
-            ghcr.io/${{ github.repository_owner }}/googlefonts-tools:latest
-            ghcr.io/${{ github.repository_owner }}/googlefonts-tools:${{ steps.version.VERSION }}
+            ghcr.io/${{ steps.meta.outputs.OWNER }}/googlefonts-tools:latest
+            ghcr.io/${{ steps.meta.outputs.OWNER }}/googlefonts-tools:${{ steps.meta.outputs.VERSION }}

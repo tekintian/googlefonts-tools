@@ -158,11 +158,15 @@ func buildPlaceholders(n int) string {
 }
 
 func NewRepo(database *sql.DB) TaskRepository {
+	return newRepoByDriver(database)
+}
+
+func newRepoByDriver(database *sql.DB) TaskRepository {
 	switch db.CurrentDriver {
 	case db.DriverMySQL:
-		return NewMySQLRepo(database)
+		return newMySQLRepo(database)
 	case db.DriverPostgres:
-		return NewPostgresRepo(database)
+		return newPostgresRepo(database)
 	default:
 		return NewSQLiteRepo(database)
 	}

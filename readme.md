@@ -21,7 +21,18 @@
 
 ```bash
 go mod tidy
-go build -o googlefonts-tools .
+
+# 默认构建（仅 SQLite，约 11MB）
+go build -ldflags="-s -w" -o googlefonts-tools .
+
+# 启用 MySQL 支持（约 11MB）
+go build -tags mysql -ldflags="-s -w" -o googlefonts-tools .
+
+# 启用 PostgreSQL 支持（约 15MB）
+go build -tags postgres -ldflags="-s -w" -o googlefonts-tools .
+
+# 全部启用（约 15MB）
+go build -tags "mysql,postgres" -ldflags="-s -w" -o googlefonts-tools .
 ```
 
 ### 命令行下载
