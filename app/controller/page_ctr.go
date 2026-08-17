@@ -22,6 +22,22 @@ func InitPageController(engine *service.DownloadEngine) {
 }
 
 func (pc *PageController) Index(w http.ResponseWriter, r *http.Request) {
+	urlParam := r.URL.Query().Get("url")
+	if urlParam != "" {
+		if !strings.Contains(urlParam, "fonts.googleapis.com") && !strings.Contains(urlParam, "fonts.gstatic.com") {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Write([]byte(indexHTML))
+			return
+		}
+		tm := service.DefaultTaskManager
+		if tm != nil {
+			task, err := tm.Submit(urlParam, "")
+			if err == nil && task != nil {
+				http.Redirect(w, r, "/d/"+task.Sign, http.StatusFound)
+				return
+			}
+		}
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write([]byte(indexHTML))
 }
