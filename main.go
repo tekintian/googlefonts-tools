@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/tekintian/googlefonts-tools/app/controller"
@@ -34,7 +35,7 @@ func main() {
 	retry := flag.Int("retry", 3, "下载失败重试次数")
 	port := flag.Int("port", 0, "服务端口 (0则从配置文件读取)")
 	workers := flag.Int("workers", 3, "异步任务Worker数量")
-	configFile := flag.String("config", "config.ini", "配置文件路径")
+	configFile := flag.String("config", "storage/config.ini", "配置文件路径")
 	showVersion := flag.Bool("version", false, "显示版本信息")
 	flag.Parse()
 
@@ -42,6 +43,8 @@ func main() {
 		fmt.Printf("%s v%s\n", AppName, AppVersion)
 		return
 	}
+
+	ensureConfigFile(*configFile)
 
 	if *downloadUrl != "" {
 		*mode = "download"
@@ -58,11 +61,11 @@ func main() {
 	}
 
 	if *port == 0 {
-		*port = utils.IniReadInt(*configFile, "server", "port", 8000)
+		*port = envOrInt("GF_SERVER_PORT", utils.IniReadInt(*configFile, "server", "port", 8000))
 	}
 
-	driverName := utils.IniReadString(*configFile, "database", "driver", "sqlite")
-	dsn := utils.IniReadString(*configFile, "database", "dsn", "")
+	driverName := envOr("GF_DB_DRIVER", utils.IniReadString(*configFile, "database", "driver", "sqlite"))
+	dsn := envOr("GF_DB_DSN", utils.IniReadString(*configFile, "database", "dsn", ""))
 
 	if err := initDatabase(driverName, dsn); err != nil {
 		fmt.Printf("数据库初始化失败: %v\n", err)
@@ -106,23 +109,23 @@ func initDatabase(driverName, dsn string) error {
 func initNotifier(configFile string) *service.NotifyDispatcher {
 	dispatcher := service.NewNotifyDispatcher()
 
-	dingtalkWebhook := utils.IniReadString(configFile, "notify", "dingtalk_webhook", "")
+	dingtalkWebhook := envOr("GF_DINGTALK_WEBHOOK", utils.IniReadString(configFile, "notify", "dingtalk_webhook", ""))
 	if dingtalkWebhook != "" {
 		dispatcher.Add(service.NewDingTalkNotifier(dingtalkWebhook))
 		fmt.Println("[Notify] 钉钉通知已启用")
 	}
 
-	wechatWebhook := utils.IniReadString(configFile, "notify", "wechat_webhook", "")
+	wechatWebhook := envOr("GF_WECHAT_WEBHOOK", utils.IniReadString(configFile, "notify", "wechat_webhook", ""))
 	if wechatWebhook != "" {
 		dispatcher.Add(service.NewWeChatNotifier(wechatWebhook))
 		fmt.Println("[Notify] 微信通知已启用")
 	}
 
-	smtpHost := utils.IniReadString(configFile, "notify", "smtp_host", "")
-	smtpPort := utils.IniReadInt(configFile, "notify", "smtp_port", 0)
-	smtpFrom := utils.IniReadString(configFile, "notify", "smtp_from", "")
-	smtpPassword := utils.IniReadString(configFile, "notify", "smtp_password", "")
-	smtpTo := utils.IniReadString(configFile, "notify", "smtp_to", "")
+	smtpHost := envOr("GF_SMTP_HOST", utils.IniReadString(configFile, "notify", "smtp_host", ""))
+	smtpPort := envOrInt("GF_SMTP_PORT", utils.IniReadInt(configFile, "notify", "smtp_port", 0))
+	smtpFrom := envOr("GF_SMTP_FROM", utils.IniReadString(configFile, "notify", "smtp_from", ""))
+	smtpPassword := envOr("GF_SMTP_PASSWORD", utils.IniReadString(configFile, "notify", "smtp_password", ""))
+	smtpTo := envOr("GF_SMTP_TO", utils.IniReadString(configFile, "notify", "smtp_to", ""))
 	if smtpHost != "" && smtpFrom != "" && smtpTo != "" {
 		dispatcher.Add(service.NewEmailNotifier(smtpHost, smtpPort, smtpFrom, smtpPassword, smtpTo))
 		fmt.Println("[Notify] 邮件通知已启用")
@@ -255,6 +258,49 @@ func copyToOutput(src, destDir string) error {
 		return err
 	}
 	return os.WriteFile(dst, data, 0644)
+}
+
+func ensureConfigFile(path string) {
+	if _, err := os.Stat(path); err == nil {
+		return
+	}
+	dir := filepath.Dir(path)
+	os.MkdirAll(dir, 0755)
+	defaultConfig := `[server]
+port=${GF_SERVER_PORT:-8000}
+
+[database]
+driver=${GF_DB_DRIVER:-sqlite}
+dsn=${GF_DB_DSN:-}
+
+[notify]
+dingtalk_webhook=${GF_DINGTALK_WEBHOOK:-}
+wechat_webhook=${GF_WECHAT_WEBHOOK:-}
+smtp_host=${GF_SMTP_HOST:-}
+smtp_port=${GF_SMTP_PORT:-25}
+smtp_from=${GF_SMTP_FROM:-}
+smtp_password=${GF_SMTP_PASSWORD:-}
+smtp_to=${GF_SMTP_TO:-}
+`
+	if err := os.WriteFile(path, []byte(defaultConfig), 0644); err == nil {
+		fmt.Printf("[Config] 已生成默认配置文件: %s\n", path)
+	}
+}
+
+func envOr(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
+func envOrInt(key string, fallback int) int {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+	}
+	return fallback
 }
 
 func splitLines(s string) []string {

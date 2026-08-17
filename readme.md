@@ -86,7 +86,7 @@ go build -tags "mysql,postgres" -ldflags="-s -w" -o googlefonts-tools .
 | `-retry` | | 下载失败重试次数（默认 3） |
 | `-port` | | 服务端口（默认从配置文件读取，fallback 8000） |
 | `-workers` | | 异步任务 Worker 数量（默认 3） |
-| `-config` | | 配置文件路径（默认 `config.ini`） |
+| `-config` | | 配置文件路径（默认 `storage/config.ini`） |
 | `-version` | | 显示版本信息 |
 
 ## API 接口
@@ -128,33 +128,51 @@ curl -X POST http://localhost:8000/api/v1/tasks \
 
 ```
 storage/
-├── db/              # SQLite 数据库文件 (googlefonts.db)
-├── cache/           # 字体 CSS 缓存 ({fontName}.css)
-├── fonts/           # 下载的字体原始文件 ({fontName}/{version}/{file})
-└── zip/             # 生成的 ZIP 打包文件 ({fontName}_{sign}.zip)
+├── config.ini      # 配置文件（首次运行自动生成）
+├── db/             # SQLite 数据库文件 (googlefonts.db)
+├── cache/          # 字体 CSS 缓存 ({fontName}.css)
+├── fonts/          # 下载的字体原始文件 ({fontName}/{version}/{file})
+└── zip/            # 生成的 ZIP 打包文件 ({fontName}_{sign}.zip)
 ```
 
 ## 配置文件
 
-`config.ini`：
+`storage/config.ini`（首次运行自动生成，也可手动创建）：
 
 ```ini
 [server]
-port=8000
+port=${GF_SERVER_PORT:-8000}
 
 [database]
-driver=sqlite
-; dsn=storage/db/googlefonts.db
+driver=${GF_DB_DRIVER:-sqlite}
+dsn=${GF_DB_DSN:-}
 
 [notify]
-dingtalk_webhook=
-wechat_webhook=
-smtp_host=
-smtp_port=25
-smtp_from=
-smtp_password=
-smtp_to=
+dingtalk_webhook=${GF_DINGTALK_WEBHOOK:-}
+wechat_webhook=${GF_WECHAT_WEBHOOK:-}
+smtp_host=${GF_SMTP_HOST:-}
+smtp_port=${GF_SMTP_PORT:-25}
+smtp_from=${GF_SMTP_FROM:-}
+smtp_password=${GF_SMTP_PASSWORD:-}
+smtp_to=${GF_SMTP_TO:-}
 ```
+
+> 配置文件支持 `${VAR:-default}` 语法，Docker 容器启动时通过 `envsubst` 自动替换为环境变量值。Go 程序也直接读取 `GF_*` 环境变量，优先级：**环境变量 > 配置文件 > 默认值**。
+
+### 环境变量
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `GF_SERVER_PORT` | 服务端口 | `8000` |
+| `GF_DB_DRIVER` | 数据库驱动 | `sqlite` |
+| `GF_DB_DSN` | 数据库连接串 | 空 |
+| `GF_DINGTALK_WEBHOOK` | 钉钉 Webhook | 空 |
+| `GF_WECHAT_WEBHOOK` | 微信 Webhook | 空 |
+| `GF_SMTP_HOST` | SMTP 服务器 | 空 |
+| `GF_SMTP_PORT` | SMTP 端口 | `25` |
+| `GF_SMTP_FROM` | 发件人 | 空 |
+| `GF_SMTP_PASSWORD` | 发件人密码 | 空 |
+| `GF_SMTP_TO` | 收件人 | 空 |
 
 ### 数据库配置
 
@@ -174,6 +192,45 @@ smtp_to=
 ```
 
 四层分层架构：Controller → Service → Repository → Model
+
+## Docker
+
+```bash
+# 快速启动（数据持久化到宿主机）
+docker run -d -p 8000:8000 -v ./gf-data:/app/storage ghcr.io/tekintian/googlefonts-tools:latest
+
+# 通过环境变量配置（推荐，无需编辑配置文件）
+docker run -d -p 8000:8000 -v ./gf-data:/app/storage \
+  -e GF_SERVER_PORT=8000 \
+  -e GF_DB_DRIVER=sqlite \
+  -e GF_DINGTALK_WEBHOOK=https://oapi.dingtalk.com/robot/send?access_token=xxx \
+  ghcr.io/tekintian/googlefonts-tools:latest
+
+# 使用 MySQL + 邮件通知
+docker run -d -p 8000:8000 -v ./gf-data:/app/storage \
+  -e GF_DB_DRIVER=mysql \
+  -e GF_DB_DSN="user:pass@tcp(127.0.0.1:3306)/fonts?charset=utf8mb4" \
+  -e GF_SMTP_HOST=smtp.example.com \
+  -e GF_SMTP_PORT=465 \
+  -e GF_SMTP_FROM=noreply@example.com \
+  -e GF_SMTP_PASSWORD=secret \
+  -e GF_SMTP_TO=admin@example.com \
+  ghcr.io/tekintian/googlefonts-tools:latest
+
+# 挂载自定义 config.ini（支持 ${VAR:-default} 模板语法）
+mkdir -p gf-data
+cat > gf-data/config.ini << 'EOF'
+[server]
+port=${GF_SERVER_PORT:-8000}
+[database]
+driver=sqlite
+[notify]
+dingtalk_webhook=${GF_DINGTALK_WEBHOOK:-}
+EOF
+docker run -d -p 8000:8000 -v ./gf-data:/app/storage ghcr.io/tekintian/googlefonts-tools:latest
+```
+
+> 容器内 `/app/storage` 是数据目录，包含 `config.ini`、数据库、缓存、字体文件和 ZIP 包。挂载此目录即可持久化所有数据。基础镜像 [ghcr.io/tekintian/alpine](https://github.com/tekintian/alpine) 内置 [envsubst](https://github.com/tekintian/envsubst)，启动时自动将配置文件中的 `${VAR:-default}` 替换为环境变量值。
 
 ## 注意事项
 

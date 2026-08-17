@@ -2,6 +2,9 @@ _build.sh
 _build_helper.go
 googlefonts-tools
 gf_v2
-storage/
+storage/db/
+storage/cache/
+storage/fonts/
+storage/zip/
 *.db
 .DS_Store

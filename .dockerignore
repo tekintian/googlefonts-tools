@@ -2,7 +2,10 @@
 .github
 .DS_Store
 docs
-storage
+storage/db
+storage/cache
+storage/fonts
+storage/zip
 *.db
 readme.md
 Makefile

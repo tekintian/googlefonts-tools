@@ -67,9 +67,10 @@ jobs:
           VERSION=${{ steps.version.outputs.VERSION }}
           DIST=dist
           PACKAGE=release
+          CONFIG=storage/config.ini
 
           mkdir -p "$PACKAGE"
-          cp config.ini "$DIST/"
+          cp "$CONFIG" "$DIST/config.ini"
 
           for FILE in "$DIST"/*; do
             BASENAME=$(basename "$FILE")
