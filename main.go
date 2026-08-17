@@ -85,11 +85,15 @@ func main() {
 
 	notifier := initNotifier(*configFile)
 
+	controller.AppVer = AppVersion
+
+	serverHost := envOr("GF_SERVER_HOST", utils.IniReadString(*configFile, "server", "host", "localhost"))
+
 	switch *mode {
 	case "download":
 		runCLIMode(*url, *urlFile, *output, engine, repo, notifier)
 	case "server":
-		runServerMode(*port, *workers, engine, repo, notifier)
+		runServerMode(serverHost, *port, *workers, engine, repo, notifier)
 	default:
 		fmt.Printf("未知模式: %s (支持: server, download)\n", *mode)
 		flag.Usage()
@@ -200,7 +204,7 @@ func runCLIMode(url, urlFile, output string, engine *service.DownloadEngine, rep
 	fmt.Printf("\n全部完成!\n")
 }
 
-func runServerMode(port, workers int, engine *service.DownloadEngine, repo repository.TaskRepository, notifier *service.NotifyDispatcher) {
+func runServerMode(host string, port, workers int, engine *service.DownloadEngine, repo repository.TaskRepository, notifier *service.NotifyDispatcher) {
 	fmt.Printf("%s v%s - Server模式\n", AppName, AppVersion)
 
 	tm := service.NewTaskManager(repo, engine, notifier, workers)
@@ -215,8 +219,8 @@ func runServerMode(port, workers int, engine *service.DownloadEngine, repo repos
 	os.MkdirAll("storage/db", 0755)
 
 	fmt.Printf("[Server] 监听端口: %d\n", port)
-	fmt.Printf("[Server] 访问地址: http://localhost:%d\n", port)
-	fmt.Printf("[Server] API文档: http://localhost:%d/api/v1/tasks\n", port)
+	fmt.Printf("[Server] 访问地址: http://%s:%d\n", host, port)
+	fmt.Printf("[Server] API文档: http://%s:%d/api/v1/tasks\n", host, port)
 
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", port), router); err != nil {
 		panic(err)
@@ -267,20 +271,21 @@ func ensureConfigFile(path string) {
 	dir := filepath.Dir(path)
 	os.MkdirAll(dir, 0755)
 	defaultConfig := `[server]
-port=${GF_SERVER_PORT:-8000}
+host=localhost
+port=8000
 
 [database]
-driver=${GF_DB_DRIVER:-sqlite}
-dsn=${GF_DB_DSN:-}
+driver=sqlite
+dsn=
 
 [notify]
-dingtalk_webhook=${GF_DINGTALK_WEBHOOK:-}
-wechat_webhook=${GF_WECHAT_WEBHOOK:-}
-smtp_host=${GF_SMTP_HOST:-}
-smtp_port=${GF_SMTP_PORT:-25}
-smtp_from=${GF_SMTP_FROM:-}
-smtp_password=${GF_SMTP_PASSWORD:-}
-smtp_to=${GF_SMTP_TO:-}
+dingtalk_webhook=
+wechat_webhook=
+smtp_host=
+smtp_port=25
+smtp_from=
+smtp_password=
+smtp_to=
 `
 	if err := os.WriteFile(path, []byte(defaultConfig), 0644); err == nil {
 		fmt.Printf("[Config] 已生成默认配置文件: %s\n", path)

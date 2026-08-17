@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 )
+
 const (
 	LineEndings = "\n" // OS-specific line endings
 )
@@ -316,7 +317,11 @@ func (ini *IniFile) clear() {
 func IniReadString(fileName, section, ident, defaultValue string) string {
 	inifile := NewIniFile(fileName, false)
 	defer inifile.Close()
-	return inifile.ReadString(section, ident, defaultValue)
+	val := inifile.ReadString(section, ident, defaultValue)
+	if strings.Contains(val, "${") {
+		return defaultValue
+	}
+	return val
 }
 
 func IniWriteString(fileName, section, ident, value string) {
@@ -328,6 +333,10 @@ func IniWriteString(fileName, section, ident, value string) {
 func IniReadInt(fileName, section, ident string, defaultValue int) int {
 	inifile := NewIniFile(fileName, false)
 	defer inifile.Close()
+	val := inifile.ReadString(section, ident, "")
+	if strings.Contains(val, "${") {
+		return defaultValue
+	}
 	return inifile.ReadInt(section, ident, defaultValue)
 }
 

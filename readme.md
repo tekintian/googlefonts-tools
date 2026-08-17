@@ -141,6 +141,7 @@ storage/
 
 ```ini
 [server]
+host=${GF_SERVER_HOST:-localhost}
 port=${GF_SERVER_PORT:-8000}
 
 [database]
@@ -163,6 +164,7 @@ smtp_to=${GF_SMTP_TO:-}
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
+| `GF_SERVER_HOST` | 服务主机名（用于显示访问地址） | `localhost` |
 | `GF_SERVER_PORT` | 服务端口 | `8000` |
 | `GF_DB_DRIVER` | 数据库驱动 | `sqlite` |
 | `GF_DB_DSN` | 数据库连接串 | 空 |
@@ -201,6 +203,7 @@ docker run -d -p 8000:8000 -v ./gf-data:/app/storage ghcr.io/tekintian/googlefon
 
 # 通过环境变量配置（推荐，无需编辑配置文件）
 docker run -d -p 8000:8000 -v ./gf-data:/app/storage \
+  -e GF_SERVER_HOST=gf.tekin.cn \
   -e GF_SERVER_PORT=8000 \
   -e GF_DB_DRIVER=sqlite \
   -e GF_DINGTALK_WEBHOOK=https://oapi.dingtalk.com/robot/send?access_token=xxx \
@@ -230,7 +233,7 @@ EOF
 docker run -d -p 8000:8000 -v ./gf-data:/app/storage ghcr.io/tekintian/googlefonts-tools:latest
 ```
 
-> 容器内 `/app/storage` 是数据目录，包含 `config.ini`、数据库、缓存、字体文件和 ZIP 包。挂载此目录即可持久化所有数据。基础镜像 [ghcr.io/tekintian/alpine](https://github.com/tekintian/alpine) 内置 [envsubst](https://github.com/tekintian/envsubst)，启动时自动将配置文件中的 `${VAR:-default}` 替换为环境变量值。
+> 容器内 `/app/storage` 是数据目录，包含 `config.ini`、数据库、缓存、字体文件和 ZIP 包。挂载此目录即可持久化所有数据。镜像内置 [envsubst](https://github.com/tekintian/envsubst)（从源码编译），启动时自动将配置文件中的 `${VAR:-default}` 替换为环境变量值。
 
 ## 注意事项
 

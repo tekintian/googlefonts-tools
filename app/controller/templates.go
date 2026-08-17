@@ -1,10 +1,19 @@
 package controller
 
+import "fmt"
+
+var AppVer = "dev"
+
+const githubRepo = "https://github.com/tekintian/googlefonts-tools"
+
 const footerCSS = `.footer{margin-top:20px;padding-top:12px;border-top:1px solid #eee;font-size:12px;color:#aaa;text-align:center}.footer a{color:#667eea;text-decoration:none}.footer a:hover{text-decoration:underline}`
 
-const footerHTML = `<div class="footer">Powered by <a href="https://ai.tekin.cn/" target="_blank">Tekin</a></div>`
+func footerHTML() string {
+	return fmt.Sprintf(`<div class="footer"><a href="%s" target="_blank">GoogleFonts Tools v%s</a> · Powered by <a href="https://ai.tekin.cn/" target="_blank">Tekin</a></div>`, githubRepo, AppVer)
+}
 
-const indexHTML = `<!DOCTYPE html>
+func indexHTML() string {
+	return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -52,7 +61,7 @@ input[type=text]:focus{border-color:#667eea}
 <p class="task-info">永久链接: <a id="permalink" href="#">-</a></p>
 <p class="task-info" id="downloadRow" style="display:none">下载链接: <a id="downloadLink" href="#">点击下载 ZIP</a></p>
 </div>
-` + footerHTML + `
+` + footerHTML() + `
 </div>
 <script>
 function submitTask(e){
@@ -87,6 +96,7 @@ btn.textContent='提交下载任务';
 </script>
 </body>
 </html>`
+}
 
 const progressHTML = `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -105,7 +115,7 @@ h1{color:#333;font-size:22px;margin-bottom:4px}
 .progress-text{color:#555;font-size:14px;margin-bottom:8px}
 .file-info{color:#888;font-size:13px}
 .status-icon{font-size:48px;margin-bottom:16px}
-.footer{margin-top:20px;padding-top:12px;border-top:1px solid #eee;font-size:12px;color:#aaa;text-align:center}.footer a{color:#667eea;text-decoration:none}.footer a:hover{text-decoration:underline}
+` + footerCSS + `
 </style>
 </head>
 <body>
@@ -116,7 +126,7 @@ h1{color:#333;font-size:22px;margin-bottom:4px}
 <div class="progress-bar"><div class="progress-fill" id="fill"></div></div>
 <p class="progress-text" id="progressText">进度: %d%%</p>
 <p class="file-info" id="fileInfo">(%d / %d 字体文件)</p>
-<div class="footer">Powered by <a href="https://ai.tekin.cn/" target="_blank">Tekin</a></div>
+` + "%s" + `
 </div>
 <script>
 var sign='%s';
@@ -158,11 +168,13 @@ h1{color:#333;font-size:22px;margin-bottom:20px}
 .info{text-align:left;margin-bottom:20px}
 .info p{color:#555;font-size:14px;padding:6px 0;border-bottom:1px solid #f0f0f0}
 .info strong{color:#333}
-.btn{display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;text-decoration:none;transition:transform .2s}
+.btn{display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;text-decoration:none;transition:transform .2s;margin:4px}
 .btn:hover{transform:translateY(-2px)}
+.btn-outline{display:inline-block;padding:12px 24px;background:#fff;color:#667eea;border:2px solid #667eea;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;transition:transform .2s;margin:4px}
+.btn-outline:hover{transform:translateY(-2px);background:#f0f0ff}
 .permalink{margin-top:20px;padding:12px;background:#f8f9fa;border-radius:8px;font-size:12px;color:#888;word-break:break-all}
 .permalink a{color:#667eea;text-decoration:none}
-.footer{margin-top:20px;padding-top:12px;border-top:1px solid #eee;font-size:12px;color:#aaa;text-align:center}.footer a{color:#667eea;text-decoration:none}.footer a:hover{text-decoration:underline}
+` + footerCSS + `
 </style>
 </head>
 <body>
@@ -177,11 +189,12 @@ h1{color:#333;font-size:22px;margin-bottom:20px}
 <p>创建时间: <strong>%s</strong></p>
 </div>
 <a href="/d/%s/download" class="btn">⬇ 下载 ZIP 文件</a>
+<a href="/" class="btn-outline">🏠 返回首页</a>
 <div class="permalink">
 永久链接: <a href="/d/%s">/d/%s</a><br>
 <small>可分享此链接，随时下载</small>
 </div>
-<div class="footer">Powered by <a href="https://ai.tekin.cn/" target="_blank">Tekin</a></div>
+` + "%s" + `
 </div>
 </body>
 </html>`
@@ -203,7 +216,7 @@ h1{color:#333;font-size:22px;margin-bottom:20px}
 .info strong{color:#333}
 .btn{display:inline-block;padding:12px 24px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;margin:4px;transition:transform .2s}
 .btn:hover{transform:translateY(-2px)}
-.footer{margin-top:20px;padding-top:12px;border-top:1px solid #eee;font-size:12px;color:#aaa;text-align:center}.footer a{color:#667eea;text-decoration:none}.footer a:hover{text-decoration:underline}
+` + footerCSS + `
 </style>
 </head>
 <body>
@@ -214,8 +227,8 @@ h1{color:#333;font-size:22px;margin-bottom:20px}
 <p>签名: <strong>%s</strong></p>
 <p>错误: <strong>%s</strong></p>
 </div>
-<a href="/" class="btn">返回首页</a>
-<div class="footer">Powered by <a href="https://ai.tekin.cn/" target="_blank">Tekin</a></div>
+<a href="/" class="btn">🏠 返回首页</a>
+` + "%s" + `
 </div>
 </body>
 </html>`
@@ -235,7 +248,7 @@ h1{color:#333;font-size:22px;margin-bottom:12px}
 p{color:#888;font-size:14px;margin-bottom:20px}
 .btn{display:inline-block;padding:12px 24px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;transition:transform .2s}
 .btn:hover{transform:translateY(-2px)}
-.footer{margin-top:20px;padding-top:12px;border-top:1px solid #eee;font-size:12px;color:#aaa;text-align:center}.footer a{color:#667eea;text-decoration:none}.footer a:hover{text-decoration:underline}
+` + footerCSS + `
 </style>
 </head>
 <body>
@@ -243,8 +256,8 @@ p{color:#888;font-size:14px;margin-bottom:20px}
 <div class="icon">🔍</div>
 <h1>任务未找到</h1>
 <p>签名: %s</p>
-<a href="/" class="btn">返回首页</a>
-<div class="footer">Powered by <a href="https://ai.tekin.cn/" target="_blank">Tekin</a></div>
+<a href="/" class="btn">🏠 返回首页</a>
+` + "%s" + `
 </div>
 </body>
 </html>`

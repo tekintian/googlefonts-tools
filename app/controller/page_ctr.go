@@ -26,7 +26,7 @@ func (pc *PageController) Index(w http.ResponseWriter, r *http.Request) {
 	if urlParam != "" {
 		if !strings.Contains(urlParam, "fonts.googleapis.com") && !strings.Contains(urlParam, "fonts.gstatic.com") {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.Write([]byte(indexHTML))
+			w.Write([]byte(indexHTML()))
 			return
 		}
 		tm := service.DefaultTaskManager
@@ -39,7 +39,7 @@ func (pc *PageController) Index(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write([]byte(indexHTML))
+	w.Write([]byte(indexHTML()))
 }
 
 func (pc *PageController) SignPage(w http.ResponseWriter, r *http.Request) {
@@ -54,7 +54,7 @@ func (pc *PageController) SignPage(w http.ResponseWriter, r *http.Request) {
 
 	if task == nil {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprintf(w, notFoundHTML, sign)
+		fmt.Fprintf(w, notFoundHTML, sign, footerHTML())
 		return
 	}
 
@@ -73,19 +73,19 @@ func (pc *PageController) SignPage(w http.ResponseWriter, r *http.Request) {
 			task.FontName, task.FontName, task.Sign,
 			sizeStr, durationStr, task.DownloadCount,
 			task.CreatedAt.Format("2006-01-02 15:04:05"),
-			sign, sign, sign,
+			sign, sign, sign, footerHTML(),
 		)
 
 	case model.StatusPending, model.StatusRunning:
 		fmt.Fprintf(w, progressHTML,
 			task.FontName, task.FontName, sign,
 			task.Progress, task.Progress,
-			task.DoneFiles, task.TotalFiles, sign,
+			task.DoneFiles, task.TotalFiles, footerHTML(), sign,
 		)
 
 	case model.StatusFailed:
 		fmt.Fprintf(w, errorHTML,
-			task.FontName, task.FontName, task.Sign, task.ErrorMsg,
+			task.FontName, task.FontName, task.Sign, task.ErrorMsg, footerHTML(),
 		)
 	}
 }

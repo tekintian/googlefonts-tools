@@ -18,10 +18,18 @@ RUN if [ -n "$BUILD_TAGS" ]; then \
       go build -ldflags="-s -w -X main.AppVersion=${APPVERSION}" -o /googlefonts-tools . ; \
     fi
 
-FROM ghcr.io/tekintian/alpine:3.20
+FROM alpine:3.20 AS envsubst-builder
+RUN apk add --no-cache gcc musl-dev git && \
+    git clone --depth 1 https://github.com/tekintian/envsubst.git /tmp/envsubst-src && \
+    cd /tmp/envsubst-src && \
+    make && \
+    mv envsubst /usr/local/bin/envsubst
+
+FROM alpine:3.20
 
 WORKDIR /app
 COPY --from=builder /googlefonts-tools .
+COPY --from=envsubst-builder /usr/local/bin/envsubst /usr/local/bin/envsubst
 COPY storage/config.ini /app/config.ini.tpl
 
 RUN mkdir -p storage/db storage/cache storage/fonts storage/zip
@@ -37,6 +45,7 @@ elif [ -f "$TEMPLATE" ]; then
   envsubst < "$TEMPLATE" > "$CONFIG"
 else
   echo "[server]" > "$CONFIG"
+  echo "host=${GF_SERVER_HOST:-localhost}" >> "$CONFIG"
   echo "port=${GF_SERVER_PORT:-8000}" >> "$CONFIG"
   echo "" >> "$CONFIG"
   echo "[database]" >> "$CONFIG"
