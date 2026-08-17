@@ -21,7 +21,7 @@ import (
 
 const (
 	AppName    = "GoogleFonts Download Tools"
-	AppVersion = "2.0.0"
+	AppVersion = "2.2.0"
 )
 
 func main() {
