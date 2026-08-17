@@ -40,6 +40,12 @@ go build -o googlefonts-tools .
 ./googlefonts-tools -mode download -url "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
 ```
 
+> ⚠️ **URL 中的 `;` 和 `&` 是 Shell 特殊字符！** 有三种方式避免 Shell 解析：
+>
+> 1. **引号包裹**（推荐）：`./gf -d "https://fonts...wght@300;400&display=swap"`
+> 2. **交互式输入**：直接运行 `./gf -d`，然后粘贴 URL（无需引号）
+> 3. **管道输入**：`echo "https://fonts...wght@300;400&display=swap" | ./gf -d -`
+
 ### Web 服务模式
 
 ```bash

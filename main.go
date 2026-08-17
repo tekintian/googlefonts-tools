@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -43,7 +45,11 @@ func main() {
 
 	if *downloadUrl != "" {
 		*mode = "download"
-		*url = *downloadUrl
+		if *downloadUrl == "-" {
+			*url = readURLFromStdin()
+		} else {
+			*url = *downloadUrl
+		}
 	} else if *serverMode {
 		*mode = "server"
 	}
@@ -132,6 +138,16 @@ func runCLIMode(url, urlFile, output string, engine *service.DownloadEngine, rep
 	if url != "" {
 		urls = append(urls, url)
 	}
+
+	if len(urls) == 0 && urlFile == "" {
+		fmt.Println("请输入 Google Fonts URL (支持粘贴，无需加引号):")
+		reader := bufio.NewReader(os.Stdin)
+		input, _ := reader.ReadString('\n')
+		input = strings.TrimSpace(input)
+		if input != "" {
+			urls = append(urls, input)
+		}
+	}
 	if urlFile != "" {
 		data, err := os.ReadFile(urlFile)
 		if err != nil {
@@ -202,6 +218,23 @@ func runServerMode(port, workers int, engine *service.DownloadEngine, repo repos
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", port), router); err != nil {
 		panic(err)
 	}
+}
+
+func readURLFromStdin() string {
+	stat, _ := os.Stdin.Stat()
+	if (stat.Mode() & os.ModeCharDevice) == 0 {
+		data, err := io.ReadAll(os.Stdin)
+		if err == nil {
+			result := strings.TrimSpace(string(data))
+			if result != "" {
+				return result
+			}
+		}
+	}
+	fmt.Println("请输入 Google Fonts URL (支持粘贴，无需加引号):")
+	reader := bufio.NewReader(os.Stdin)
+	input, _ := reader.ReadString('\n')
+	return strings.TrimSpace(input)
 }
 
 func formatSize(size int64) string {
