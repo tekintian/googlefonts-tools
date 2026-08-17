@@ -19,7 +19,7 @@ RUN if [ -n "$BUILD_TAGS" ]; then \
     fi
 
 FROM alpine:3.20 AS envsubst-builder
-RUN apk add --no-cache gcc musl-dev git && \
+RUN apk add --no-cache gcc make musl-dev git && \
     git clone --depth 1 https://github.com/tekintian/envsubst.git /tmp/envsubst-src && \
     cd /tmp/envsubst-src && \
     make && \
