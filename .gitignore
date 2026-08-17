@@ -1,0 +1,6 @@
+_build.sh
+_build_helper.go
+googlefonts-tools
+storage/
+*.db
+.DS_Store

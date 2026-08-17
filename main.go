@@ -1,26 +1,254 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/tekintian/googlefonts-tools/app/controller"
+	"github.com/tekintian/googlefonts-tools/app/model"
+	"github.com/tekintian/googlefonts-tools/app/repository"
+	"github.com/tekintian/googlefonts-tools/app/service"
 	"github.com/tekintian/googlefonts-tools/utils"
+	"github.com/tekintian/googlefonts-tools/utils/db"
 )
 
-// 纯 go 原生 Googlefonts字体解析下载工具, 无任何第三方框架的依赖!
-// @author tekintian@gmail.com
-// @url  http://dev.yunnan.ws
+const (
+	AppName    = "GoogleFonts Download Tools"
+	AppVersion = "2.0.0"
+)
+
 func main() {
-	//这里的顺序,需要在前面绑定fn
-	http.HandleFunc("/", controller.GoogleFontsCtl.Fetch)
-	//从配置文件获取端口信息 , 默认 8080
-	port := utils.IniReadInt("config.ini", "server", "port", 8080)
-	//监听并启动服务
-	err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
-	if err != nil {
-		panic(err.Error())
-	} else {
-		fmt.Printf("Server %d started!", port)
+	mode := flag.String("mode", "", "运行模式: server / download (也可用 -s / -d 简写)")
+	downloadUrl := flag.String("d", "", "直接下载指定URL (等价于 -mode download -url <URL>)")
+	serverMode := flag.Bool("s", false, "启动Web服务 (等价于 -mode server)")
+	url := flag.String("url", "", "Google Fonts URL (download模式必填)")
+	urlFile := flag.String("file", "", "包含URL列表的文件，每行一个URL (download模式批量下载)")
+	output := flag.String("output", "", "输出目录 (默认为 storage/ 目录下)")
+	concurrency := flag.Int("concurrency", 5, "并发下载数")
+	retry := flag.Int("retry", 3, "下载失败重试次数")
+	port := flag.Int("port", 0, "服务端口 (0则从配置文件读取)")
+	workers := flag.Int("workers", 3, "异步任务Worker数量")
+	configFile := flag.String("config", "config.ini", "配置文件路径")
+	showVersion := flag.Bool("version", false, "显示版本信息")
+	flag.Parse()
+
+	if *showVersion {
+		fmt.Printf("%s v%s\n", AppName, AppVersion)
+		return
 	}
+
+	if *downloadUrl != "" {
+		*mode = "download"
+		*url = *downloadUrl
+	} else if *serverMode {
+		*mode = "server"
+	}
+	if *mode == "" {
+		*mode = "server"
+	}
+
+	if *port == 0 {
+		*port = utils.IniReadInt(*configFile, "server", "port", 8000)
+	}
+
+	driverName := utils.IniReadString(*configFile, "database", "driver", "sqlite")
+	dsn := utils.IniReadString(*configFile, "database", "dsn", "")
+
+	if err := initDatabase(driverName, dsn); err != nil {
+		fmt.Printf("数据库初始化失败: %v\n", err)
+		os.Exit(1)
+	}
+	defer db.Close()
+
+	repo := repository.NewRepo(db.DB)
+	if err := repo.Init(); err != nil {
+		fmt.Printf("数据库表初始化失败: %v\n", err)
+		os.Exit(1)
+	}
+
+	engine := service.NewDownloadEngine()
+	engine.MaxConcurrency = *concurrency
+	engine.MaxRetry = *retry
+
+	notifier := initNotifier(*configFile)
+
+	switch *mode {
+	case "download":
+		runCLIMode(*url, *urlFile, *output, engine, repo, notifier)
+	case "server":
+		runServerMode(*port, *workers, engine, repo, notifier)
+	default:
+		fmt.Printf("未知模式: %s (支持: server, download)\n", *mode)
+		flag.Usage()
+		os.Exit(1)
+	}
+}
+
+func initDatabase(driverName, dsn string) error {
+	if driverName == "sqlite" && dsn == "" {
+		dsn = "storage/db/googlefonts.db"
+		os.MkdirAll("storage/db", 0755)
+	}
+	fmt.Printf("[DB] 初始化数据库: driver=%s\n", driverName)
+	return db.Init(driverName, dsn)
+}
+
+func initNotifier(configFile string) *service.NotifyDispatcher {
+	dispatcher := service.NewNotifyDispatcher()
+
+	dingtalkWebhook := utils.IniReadString(configFile, "notify", "dingtalk_webhook", "")
+	if dingtalkWebhook != "" {
+		dispatcher.Add(service.NewDingTalkNotifier(dingtalkWebhook))
+		fmt.Println("[Notify] 钉钉通知已启用")
+	}
+
+	wechatWebhook := utils.IniReadString(configFile, "notify", "wechat_webhook", "")
+	if wechatWebhook != "" {
+		dispatcher.Add(service.NewWeChatNotifier(wechatWebhook))
+		fmt.Println("[Notify] 微信通知已启用")
+	}
+
+	smtpHost := utils.IniReadString(configFile, "notify", "smtp_host", "")
+	smtpPort := utils.IniReadInt(configFile, "notify", "smtp_port", 0)
+	smtpFrom := utils.IniReadString(configFile, "notify", "smtp_from", "")
+	smtpPassword := utils.IniReadString(configFile, "notify", "smtp_password", "")
+	smtpTo := utils.IniReadString(configFile, "notify", "smtp_to", "")
+	if smtpHost != "" && smtpFrom != "" && smtpTo != "" {
+		dispatcher.Add(service.NewEmailNotifier(smtpHost, smtpPort, smtpFrom, smtpPassword, smtpTo))
+		fmt.Println("[Notify] 邮件通知已启用")
+	}
+
+	return dispatcher
+}
+
+func runCLIMode(url, urlFile, output string, engine *service.DownloadEngine, repo repository.TaskRepository, notifier *service.NotifyDispatcher) {
+	fmt.Printf("%s v%s - CLI模式\n", AppName, AppVersion)
+
+	var urls []string
+	if url != "" {
+		urls = append(urls, url)
+	}
+	if urlFile != "" {
+		data, err := os.ReadFile(urlFile)
+		if err != nil {
+			fmt.Printf("读取URL文件失败: %v\n", err)
+			os.Exit(1)
+		}
+		for _, line := range splitLines(string(data)) {
+			line = trimSpace(line)
+			if line != "" && !strings.HasPrefix(line, "#") {
+				urls = append(urls, line)
+			}
+		}
+	}
+
+	if len(urls) == 0 {
+		fmt.Println("错误: 请通过 -url 或 -file 参数提供Google Fonts URL")
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	if output != "" {
+		os.MkdirAll(output, 0755)
+	}
+
+	tm := service.NewTaskManager(repo, engine, notifier, 1)
+
+	for i, u := range urls {
+		fmt.Printf("\n[%d/%d] 下载: %s\n", i+1, len(urls), u)
+		task, err := tm.SubmitSync(u, "")
+		if err != nil {
+			fmt.Printf("  ❌ 失败: %v\n", err)
+			continue
+		}
+
+		if task.Status == model.StatusSuccess {
+			fmt.Printf("  ✅ 完成: %s (%s)\n", task.ZipPath, formatSize(task.ZipSize))
+			if output != "" {
+				if err := copyToOutput(task.ZipPath, output); err == nil {
+					fmt.Printf("  📁 已复制到: %s\n", output)
+				}
+			}
+		} else {
+			fmt.Printf("  ❌ 失败: %s\n", task.ErrorMsg)
+		}
+	}
+
+	fmt.Printf("\n全部完成!\n")
+}
+
+func runServerMode(port, workers int, engine *service.DownloadEngine, repo repository.TaskRepository, notifier *service.NotifyDispatcher) {
+	fmt.Printf("%s v%s - Server模式\n", AppName, AppVersion)
+
+	tm := service.NewTaskManager(repo, engine, notifier, workers)
+	tm.Start()
+
+	router := controller.NewRouter()
+	router.Setup(engine)
+
+	os.MkdirAll("storage/fonts", 0755)
+	os.MkdirAll("storage/cache", 0755)
+	os.MkdirAll("storage/zip", 0755)
+	os.MkdirAll("storage/db", 0755)
+
+	fmt.Printf("[Server] 监听端口: %d\n", port)
+	fmt.Printf("[Server] 访问地址: http://localhost:%d\n", port)
+	fmt.Printf("[Server] API文档: http://localhost:%d/api/v1/tasks\n", port)
+
+	if err := http.ListenAndServe(fmt.Sprintf(":%d", port), router); err != nil {
+		panic(err)
+	}
+}
+
+func formatSize(size int64) string {
+	if size < 1024 {
+		return fmt.Sprintf("%d B", size)
+	}
+	if size < 1024*1024 {
+		return fmt.Sprintf("%.1f KB", float64(size)/1024)
+	}
+	return fmt.Sprintf("%.1f MB", float64(size)/(1024*1024))
+}
+
+func copyToOutput(src, destDir string) error {
+	filename := filepath.Base(src)
+	dst := filepath.Join(destDir, filename)
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(dst, data, 0644)
+}
+
+func splitLines(s string) []string {
+	var lines []string
+	start := 0
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\n' {
+			line := s[start:i]
+			if len(line) > 0 && line[len(line)-1] == '\r' {
+				line = line[:len(line)-1]
+			}
+			lines = append(lines, line)
+			start = i + 1
+		}
+	}
+	if start < len(s) {
+		lines = append(lines, s[start:])
+	}
+	return lines
+}
+
+func trimSpace(s string) string {
+	for len(s) > 0 && (s[0] == ' ' || s[0] == '\t') {
+		s = s[1:]
+	}
+	for len(s) > 0 && (s[len(s)-1] == ' ' || s[len(s)-1] == '\t') {
+		s = s[:len(s)-1]
+	}
+	return s
 }

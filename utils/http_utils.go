@@ -2,86 +2,48 @@ package utils
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/rand"
 	"net/http"
-	"regexp"
-	"strings"
 	"time"
 )
 
-// http get request with user defined ip and ua
+var DefaultUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
 func HttpGet(url string, ip, ua string) ([]byte, error) {
 	client := &http.Client{
-		Timeout: 500 * time.Second,
+		Timeout: 120 * time.Second,
 	}
-	req, _ := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	if ua == "" {
+		ua = DefaultUserAgent
+	}
 	req.Header.Set("User-Agent", ua)
-	req.Header.Set("X-FORWARDED-FOR", ip)
-	req.Header.Set("CLIENT-IP", ip)
+	if ip != "" {
+		req.Header.Set("X-FORWARDED-FOR", ip)
+		req.Header.Set("CLIENT-IP", ip)
+	}
 
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
-	return body, err
+	return body, nil
 }
 
-// GetClientIp returns the client ip of this request without port.
-// Note that this ip address might be modified by client header.
-func GetClientIp(r *http.Request) string {
-	clientIp := ""
-	realIps := r.Header.Get("X-Forwarded-For")
-	if realIps != "" && len(realIps) != 0 && !strings.EqualFold("unknown", realIps) {
-		ipArray := strings.Split(realIps, ",")
-		clientIp = ipArray[0]
-	}
-	if clientIp == "" {
-		clientIp = r.Header.Get("Proxy-Client-IP")
-	}
-	if clientIp == "" {
-		clientIp = r.Header.Get("WL-Proxy-Client-IP")
-	}
-	if clientIp == "" {
-		clientIp = r.Header.Get("HTTP_CLIENT_IP")
-	}
-	if clientIp == "" {
-		clientIp = r.Header.Get("HTTP_X_FORWARDED_FOR")
-	}
-	if clientIp == "" {
-		clientIp = r.Header.Get("X-Real-IP")
-	}
-	if clientIp == "" {
-		clientIp = GetRemoteIp(r)
-	}
-	return clientIp
-}
-
-// GetRemoteIp returns the ip from RemoteAddr.
-func GetRemoteIp(r *http.Request) string {
-	regex, err := regexp.Compile(`(.+):(\d+)`)
-	if err != nil {
-		return ""
-	}
-	array := regex.FindStringSubmatch(r.RemoteAddr)
-	if len(array) > 1 {
-		return strings.Trim(array[1], "[]")
-	}
-	return r.RemoteAddr
-}
-
-// 生成一个随机IP地址
 func GetFakeIp() string {
-	rand.Seed(time.Now().UnixNano())
-	i1 := rand.Intn(250)
-	//排除内网IP
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	i1 := r.Intn(250)
 	if i1 == 127 || i1 == 10 || i1 == 192 || i1 == 172 || i1 == 0 {
-		i1 = 100 + rand.Intn(150)
+		i1 = 100 + r.Intn(150)
 	}
-	return fmt.Sprintf("%d.%d.%d.%d", i1, rand.Intn(250), rand.Intn(250), rand.Intn(250))
+	return fmt.Sprintf("%d.%d.%d.%d", i1, r.Intn(250), r.Intn(250), r.Intn(250))
 }
