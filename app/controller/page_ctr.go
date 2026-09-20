@@ -9,6 +9,7 @@ import (
 
 	"github.com/tekintian/googlefonts-tools/app/model"
 	"github.com/tekintian/googlefonts-tools/app/service"
+	"github.com/tekintian/googlefonts-tools/utils"
 )
 
 type PageController struct {
@@ -69,18 +70,31 @@ func (pc *PageController) SignPage(w http.ResponseWriter, r *http.Request) {
 		} else {
 			durationStr = "-"
 		}
-		fmt.Fprintf(w, resultHTML,
-			task.FontName, task.FontName, task.Sign,
+		cssPath := fmt.Sprintf("/c/%s/%s/%s.css", task.FontName, utils.ShortSign(task.Sign), task.FontName)
+		zipURL := fmt.Sprintf("/c/d/%s_%s.zip", task.FontName, utils.ShortSign(task.Sign))
+		scheme := "http"
+		if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+			scheme = "https"
+		}
+		cssLinkHref := fmt.Sprintf("//%s%s", r.Host, cssPath)
+		cssFullURL := fmt.Sprintf("%s://%s%s", scheme, r.Host, cssPath)
+		w.Write([]byte(fmt.Sprintf(resultHTML,
+			task.FontName, task.FontName, task.FontName,
+			sign, task.FontName, task.FontName,
+			task.FontName,
+			task.Sign, task.URL, task.URL,
 			sizeStr, durationStr, task.DownloadCount,
 			task.CreatedAt.Format("2006-01-02 15:04:05"),
-			sign, sign, sign, footerHTML(),
-		)
+			zipURL, cssLinkHref, cssFullURL, cssFullURL,
+			sign, sign, footerHTML(),
+		)))
 
 	case model.StatusPending, model.StatusRunning:
 		fmt.Fprintf(w, progressHTML,
-			task.FontName, task.FontName, sign,
-			task.Progress, task.Progress,
-			task.DoneFiles, task.TotalFiles, footerHTML(), sign,
+			task.FontName, task.FontName, task.Progress,
+			task.FontName, sign,
+			task.Progress, task.DoneFiles, task.TotalFiles,
+			footerHTML(), sign,
 		)
 
 	case model.StatusFailed:
@@ -111,9 +125,8 @@ func (pc *PageController) SignDownload(w http.ResponseWriter, r *http.Request) {
 
 	go tm.IncrementDownloadCount(sign)
 
-	if err := pc.engine.ServeZipFile(w, task.ZipPath, task.FontName); err != nil {
-		http.Error(w, "file not found", http.StatusNotFound)
-	}
+	zipURL := fmt.Sprintf("/c/d/%s_%s.zip", task.FontName, utils.ShortSign(sign))
+	http.Redirect(w, r, zipURL, http.StatusFound)
 }
 
 func (pc *PageController) SignProgress(w http.ResponseWriter, r *http.Request) {
@@ -178,6 +191,52 @@ func formatFileSize(size int64) string {
 		return fmt.Sprintf("%.1f KB", float64(size)/1024)
 	}
 	return fmt.Sprintf("%.1f MB", float64(size)/(1024*1024))
+}
+
+func (pc *PageController) Recent(w http.ResponseWriter, r *http.Request) {
+	tm := service.DefaultTaskManager
+	tasks, _ := tm.ListTasks(0, 50)
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	if len(tasks) == 0 {
+		fmt.Fprintf(w, recentHTML, `<p class="empty">暂无下载记录</p><a href="/" class="back">🏠 返回首页</a>`)
+		return
+	}
+
+	rows := `<table><tr><th>字体</th><th>Google URL</th><th>状态</th><th>大小</th><th>时间</th><th>操作</th></tr>`
+	for _, t := range tasks {
+		statusClass := "status-pending"
+		statusText := string(t.Status)
+		switch t.Status {
+		case model.StatusSuccess:
+			statusClass = "status-success"
+			statusText = "✅ 成功"
+		case model.StatusFailed:
+			statusClass = "status-failed"
+			statusText = "❌ 失败"
+		case model.StatusRunning:
+			statusClass = "status-running"
+			statusText = "⏳ 运行中"
+		case model.StatusPending:
+			statusClass = "status-pending"
+			statusText = "⏳ 等待中"
+		}
+
+		sizeStr := "-"
+		if t.ZipSize > 0 {
+			sizeStr = formatFileSize(t.ZipSize)
+		}
+
+		rows += fmt.Sprintf(
+			`<tr><td class="font-name">%s</td><td class="url-cell"><a href="%s" target="_blank">%s</a></td><td class="%s">%s</td><td>%s</td><td>%s</td><td><a href="/d/%s">查看</a></td></tr>`,
+			t.FontName, t.URL, t.URL, statusClass, statusText, sizeStr,
+			t.CreatedAt.Format("01-02 15:04"), t.Sign,
+		)
+	}
+	rows += `</table><a href="/" class="back">🏠 返回首页</a>`
+
+	fmt.Fprintf(w, recentHTML, rows)
 }
 
 func extractPathParam(path, prefix, suffix string) string {

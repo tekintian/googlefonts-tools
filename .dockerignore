@@ -4,8 +4,7 @@
 docs
 storage/db
 storage/cache
-storage/fonts
-storage/zip
+storage/c
 *.db
 readme.md
 Makefile

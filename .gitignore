@@ -4,7 +4,6 @@ googlefonts-tools
 gf_v2
 storage/db/
 storage/cache/
-storage/fonts/
-storage/zip/
+storage/c/
 *.db
 .DS_Store

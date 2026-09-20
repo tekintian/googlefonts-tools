@@ -116,9 +116,9 @@ func (r *postgresRepo) UpdateProgress(sign string, status model.TaskStatus, prog
 	return err
 }
 
-func (r *postgresRepo) UpdateSuccess(sign string, zipPath string, zipSize int64) error {
-	q := r.pq(`UPDATE tasks SET status=?, progress=?, zip_path=?, zip_size=?, updated_at=?, completed_at=? WHERE sign=?`)
-	_, err := r.db.Exec(q, model.StatusSuccess, 100, zipPath, zipSize, time.Now(), time.Now(), sign)
+func (r *postgresRepo) UpdateSuccess(sign string, fontName string, zipPath string, zipSize int64) error {
+	q := r.pq(`UPDATE tasks SET status=?, font_name=?, progress=?, zip_path=?, zip_size=?, updated_at=?, completed_at=? WHERE sign=?`)
+	_, err := r.db.Exec(q, model.StatusSuccess, fontName, 100, zipPath, zipSize, time.Now(), time.Now(), sign)
 	return err
 }
 

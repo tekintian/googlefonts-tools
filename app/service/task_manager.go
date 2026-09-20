@@ -83,7 +83,7 @@ func (tm *TaskManager) processTask(task *model.Task) {
 		return
 	}
 
-	tm.repo.UpdateSuccess(task.Sign, task.ZipPath, task.ZipSize)
+	tm.repo.UpdateSuccess(task.Sign, task.FontName, task.ZipPath, task.ZipSize)
 	tm.publish(model.TaskProgress{
 		Sign:       task.Sign,
 		Status:     model.StatusSuccess,

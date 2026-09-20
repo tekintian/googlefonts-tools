@@ -5,9 +5,15 @@ import (
 	"encoding/hex"
 )
 
-// 普通MD5加密
 func Md5(txt string) string {
 	o := md5.New()
 	o.Write([]byte(txt))
 	return hex.EncodeToString(o.Sum(nil))
+}
+
+func ShortSign(sign string) string {
+	if len(sign) > 16 {
+		return sign[len(sign)-16:]
+	}
+	return sign
 }

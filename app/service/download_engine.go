@@ -5,7 +5,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"regexp"
 	"strings"
@@ -18,9 +17,8 @@ import (
 
 const (
 	StorageDir = "storage"
-	FontsDir   = "storage/fonts"
+	ContentDir = "storage/c"
 	CacheDir   = "storage/cache"
-	ZipDir     = "storage/zip"
 	DbDir      = "storage/db"
 	FPrefix    = "https://fonts.gstatic.com/s/"
 
@@ -58,9 +56,9 @@ func NewDownloadEngine() *DownloadEngine {
 }
 
 func (e *DownloadEngine) Download(task *model.Task, onProgress ProgressCallback) error {
-	os.MkdirAll(FontsDir, 0755)
+	os.MkdirAll(ContentDir, 0755)
+	os.MkdirAll(ContentDir+"/d", 0755)
 	os.MkdirAll(CacheDir, 0755)
-	os.MkdirAll(ZipDir, 0755)
 
 	ip := utils.GetFakeIp()
 	ua := "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -77,12 +75,19 @@ func (e *DownloadEngine) Download(task *model.Task, onProgress ProgressCallback)
 		return fmt.Errorf("request blocked by Google, please try again later")
 	}
 
-	fontCss := fmt.Sprintf("%s/%s/%s.css", utils.GetPwd(), CacheDir, fontName)
+	fontCss := fmt.Sprintf("%s/%s/%s_%s.css", utils.GetPwd(), CacheDir, fontName, utils.ShortSign(task.Sign))
 	if err := e.saveFile(fontCss, strings.ReplaceAll(string(data), FPrefix, "")); err != nil {
 		return fmt.Errorf("save css error: %w", err)
 	}
 
-	fontFiles := e.parseFontURLs(string(data))
+	contentFontDir := fmt.Sprintf("%s/%s/%s/%s", utils.GetPwd(), ContentDir, fontName, utils.ShortSign(task.Sign))
+	selfHostCss := fmt.Sprintf("%s/%s.css", contentFontDir, fontName)
+	selfHostContent := e.GenerateSelfHostCSS(string(data), task.URL)
+	if err := e.saveFile(selfHostCss, selfHostContent); err != nil {
+		return fmt.Errorf("save self-host css error: %w", err)
+	}
+
+	fontFiles := e.parseFontURLs(string(data), fontName)
 	totalFiles := len(fontFiles) + 1
 
 	if onProgress != nil {
@@ -101,13 +106,13 @@ func (e *DownloadEngine) Download(task *model.Task, onProgress ProgressCallback)
 	}
 
 	allFiles := make([]string, 0, len(downloadedFiles)+1)
-	allFiles = append(allFiles, fontCss)
+	allFiles = append(allFiles, selfHostCss)
 	allFiles = append(allFiles, downloadedFiles...)
 
-	zipSign := fmt.Sprintf("%s_%s", fontName, task.Sign)
-	zipPath := fmt.Sprintf("%s/%s/%s.zip", utils.GetPwd(), ZipDir, zipSign)
+	zipSign := fmt.Sprintf("%s_%s", fontName, utils.ShortSign(task.Sign))
+	zipPath := fmt.Sprintf("%s/%s/d/%s.zip", utils.GetPwd(), ContentDir, zipSign)
 
-	if err := e.createZip(allFiles, zipPath); err != nil {
+	if err := e.createZip(allFiles, zipPath, fontName); err != nil {
 		return fmt.Errorf("create zip error: %w", err)
 	}
 
@@ -129,14 +134,14 @@ func (e *DownloadEngine) parseFontName(url string) string {
 	return "unknown"
 }
 
-func (e *DownloadEngine) parseFontURLs(cssContent string) []FontFile {
+func (e *DownloadEngine) parseFontURLs(cssContent string, fontName string) []FontFile {
 	matches := regFUrl.FindAllStringSubmatch(cssContent, -1)
 	var files []FontFile
 	for _, m := range matches {
 		if len(m) > 1 && strings.HasPrefix(m[1], "https://fonts.gstatic.com/s/") {
 			ffMatches := regFFUrl.FindAllStringSubmatch(m[1], -1)
 			if len(ffMatches) > 0 && len(ffMatches[0]) >= 4 {
-				dirName := fmt.Sprintf("%s/%s/%s", FontsDir, ffMatches[0][1], ffMatches[0][2])
+				dirName := fmt.Sprintf("%s/%s/%s", ContentDir, fontName, ffMatches[0][2])
 				files = append(files, FontFile{
 					URL:      m[1],
 					DirName:  dirName,
@@ -258,7 +263,7 @@ func (e *DownloadEngine) saveFileBytes(filename string, data []byte) error {
 	return bw.Flush()
 }
 
-func (e *DownloadEngine) createZip(srcFiles []string, dstFilename string) error {
+func (e *DownloadEngine) createZip(srcFiles []string, dstFilename string, fontName string) error {
 	utils.MustExist(dstFilename)
 
 	zipfile, err := os.Create(dstFilename)
@@ -271,16 +276,13 @@ func (e *DownloadEngine) createZip(srcFiles []string, dstFilename string) error 
 	defer archive.Close()
 
 	pwd := utils.GetPwd()
-	fontsPrefix := fmt.Sprintf("%s/%s/", pwd, FontsDir)
-	cachePrefix := fmt.Sprintf("%s/%s/", pwd, CacheDir)
+	contentFontPrefix := fmt.Sprintf("%s/%s/", pwd, ContentDir)
 
 	for _, v := range srcFiles {
 		header := zip.FileHeader{}
 		relPath := v
-		if strings.HasPrefix(v, fontsPrefix) {
-			relPath = strings.TrimPrefix(v, fontsPrefix)
-		} else if strings.HasPrefix(v, cachePrefix) {
-			relPath = strings.TrimPrefix(v, cachePrefix)
+		if strings.HasPrefix(v, contentFontPrefix) {
+			relPath = strings.TrimPrefix(v, contentFontPrefix)
 		}
 		header.Name = relPath
 		header.Method = zip.Deflate
@@ -301,23 +303,22 @@ func (e *DownloadEngine) createZip(srcFiles []string, dstFilename string) error 
 	return nil
 }
 
-func (e *DownloadEngine) ServeZipFile(w http.ResponseWriter, zipPath, fontName string) error {
-	f, err := os.Open(zipPath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
+func (e *DownloadEngine) GenerateSelfHostCSS(cssContent string, originalURL string) string {
+	urlReg := regexp.MustCompile(`url\((https://fonts\.gstatic\.com/s/[^)]+)\)`)
+	ffReg := regexp.MustCompile(`https://fonts\.gstatic\.com/s/([^/]+)/([^/]+)/(.+)`)
 
-	fi, err := f.Stat()
-	if err != nil {
-		return err
-	}
+	result := urlReg.ReplaceAllStringFunc(cssContent, func(urlStr string) string {
+		submatch := urlReg.FindStringSubmatch(urlStr)
+		if len(submatch) < 2 {
+			return urlStr
+		}
+		matches := ffReg.FindStringSubmatch(submatch[1])
+		if len(matches) >= 4 {
+			relPath := fmt.Sprintf("../%s/%s", matches[2], matches[3])
+			return "url(" + relPath + ")"
+		}
+		return urlStr
+	})
 
-	zipName := fmt.Sprintf("%s.zip", fontName)
-	w.Header().Set("Content-Type", "application/zip")
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, zipName))
-	w.Header().Set("Content-Length", fmt.Sprintf("%d", fi.Size()))
-	http.ServeContent(w, &http.Request{Method: "GET"}, zipName, fi.ModTime(), f)
-
-	return nil
+	return fmt.Sprintf("/* Google Fonts: `%s` */\n%s", originalURL, result)
 }

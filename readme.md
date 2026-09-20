@@ -8,6 +8,10 @@
 
 - **命令行下载** — 一条命令直接下载字体 ZIP 包
 - **Web 服务** — 提交任务后生成永久链接，随时随地查看状态和下载结果
+- **自托管 CSS** — 自动生成 `@font-face` CSS，将字体 URL 替换为本地相对路径（`../{version}/xxx.woff2`），摆脱 Google Fonts CDN 依赖
+- **静态目录直出** — 下载文件按 `storage/c/{fontName}/` 组织，Nginx 只需配置 `/c/` 即可服务 ZIP、CSS、字体全部静态资源
+- **HTTP 缓存** — 静态文件支持 Cache-Control `public, max-age=31536000, immutable`，前置 Nginx/Cloudflare 自动实现全球 CDN
+- **协议相对 URL** — 自托管 `<link>` 引用使用 `//host/path` 格式，浏览器自动匹配 HTTP/HTTPS
 - **异步任务调度** — Goroutine Worker 池 + Channel 并发处理
 - **幂等性设计** — 基于 URL 的 MD5 签名，同一 URL 不重复下载，已有结果直接返回
 - **SSE 实时进度** — Server-Sent Events 推送下载进度，前端实时更新
@@ -98,8 +102,12 @@ go build -tags "mysql,postgres" -ldflags="-s -w" -o googlefonts-tools .
 | GET | `/api/v1/tasks/{sign}` | 查询任务状态 |
 | GET | `/api/v1/tasks/{sign}/progress` | SSE 实时进度推送 |
 | GET | `/d/{sign}` | 永久链接 — 任务状态页 |
-| GET | `/d/{sign}/download` | 永久链接 — 下载 ZIP 文件 |
+| GET | `/d/{sign}/download` | 永久链接 — 302 重定向到 `/c/` 静态 ZIP（保留下载计数） |
 | GET | `/d/{sign}/progress` | 永久链接 — SSE 进度推送 |
+| GET | `/recent` | 最近下载列表（含 Google 原始 URL，方便溯源） |
+| GET | `/c/d/{fontName}_{sign16}.zip` | ZIP 文件（静态文件，Nginx 可直接服务） |
+| GET | `/c/{fontName}/{sign16}/{fontName}.css` | 自托管 CSS（静态文件，Nginx 可直接服务） |
+| GET | `/c/{fontName}/{version}/xxx.woff2` | 字体文件（静态文件，Nginx 可直接服务，同名字体共享） |
 
 ### 创建任务示例
 
@@ -130,10 +138,63 @@ curl -X POST http://localhost:8000/api/v1/tasks \
 storage/
 ├── config.ini      # 配置文件（首次运行自动生成）
 ├── db/             # SQLite 数据库文件 (googlefonts.db)
-├── cache/          # 字体 CSS 缓存 ({fontName}.css)
-├── fonts/          # 下载的字体原始文件 ({fontName}/{version}/{file})
-└── zip/            # 生成的 ZIP 打包文件 ({fontName}_{sign}.zip)
+├── cache/          # 原始 CSS 缓存 ({fontName}_{sign16}.css)
+└── c/              # 静态内容目录（Nginx 只需配置 /c/ 即可服务全部资源）
+    ├── d/                      # ZIP 下载包
+    │   └── {fontName}_{sign16}.zip
+    └── {fontName}/              # 如 poppins/
+        ├── {version}/           # 共享字体文件（如 v24/xxx.woff2）
+        └── {sign16}/            # URL 签名后16位，不同子集 CSS 各自独立
+            └── {fontName}.css   # 引用 ../{version}/xxx.woff2 相对路径
 ```
+
+### Nginx 配置
+
+下载完成后，Nginx 只需一个 `location /c/` 即可服务 ZIP、CSS、字体全部静态资源：
+
+```nginx
+location /c/ {
+    alias /path/to/storage/c/;
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+}
+```
+
+前端引用自托管字体（协议相对 URL，自动匹配 HTTP/HTTPS）：
+
+```html
+<link rel="stylesheet" href="//gf.tekin.cn/c/inter/312d1133e488a478/inter.css">
+```
+
+ZIP 直接下载：
+
+```
+/c/d/inter_312d1133e488a478.zip
+```
+
+### 自托管 CSS 工作原理
+
+下载完成后，工具自动将 Google Fonts CSS 中的绝对 URL 替换为本地相对路径：
+
+```
+# 原始 Google Fonts CSS
+url(https://fonts.gstatic.com/s/inter/v24/pxiEyp8kv8JHgFVrJJbecmNE.woff2)
+
+# 自托管 CSS（相对路径引用同名字体共享目录）
+url(../v24/pxiEyp8kv8JHgFVrJJbecmNE.woff2)
+```
+
+同一字体的不同子集（如不同 weight）共享 `{version}/` 目录下的字体文件，仅 CSS 文件按 `{sign16}/` 独立存储，避免字体文件重复。
+
+### 下载完成页面
+
+任务完成后，永久链接页面（`/d/{sign}`）展示：
+
+- 字体信息（签名、Google 源 URL、大小、耗时、下载次数、创建时间）
+- ZIP 下载按钮
+- **自托管引用**：可直接复制的 `<link>` 标签（协议相对 URL）
+- **CSS 文件地址**：可点击在新窗口打开的完整 URL
+- 永久链接（可分享）
 
 ## 配置文件
 

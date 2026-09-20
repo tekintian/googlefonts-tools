@@ -15,7 +15,7 @@ type TaskRepository interface {
 	Create(task *model.Task) error
 	Update(task *model.Task) error
 	UpdateProgress(sign string, status model.TaskStatus, progress, doneFiles, totalFiles int) error
-	UpdateSuccess(sign string, zipPath string, zipSize int64) error
+	UpdateSuccess(sign string, fontName string, zipPath string, zipSize int64) error
 	UpdateFailed(sign string, errMsg string) error
 	IncrementDownloadCount(sign string) error
 	DeleteBefore(t time.Time) (int64, error)

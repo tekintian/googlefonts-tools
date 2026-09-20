@@ -21,7 +21,7 @@ import (
 
 const (
 	AppName    = "GoogleFonts Download Tools"
-	AppVersion = "2.2.0"
+	AppVersion = "2.3.0"
 )
 
 func main() {
@@ -179,6 +179,9 @@ func runCLIMode(url, urlFile, output string, engine *service.DownloadEngine, rep
 		os.MkdirAll(output, 0755)
 	}
 
+	os.MkdirAll("storage/c/d", 0755)
+	os.MkdirAll("storage/cache", 0755)
+
 	tm := service.NewTaskManager(repo, engine, notifier, 1)
 
 	for i, u := range urls {
@@ -213,9 +216,8 @@ func runServerMode(host string, port, workers int, engine *service.DownloadEngin
 	router := controller.NewRouter()
 	router.Setup(engine)
 
-	os.MkdirAll("storage/fonts", 0755)
+	os.MkdirAll("storage/c/d", 0755)
 	os.MkdirAll("storage/cache", 0755)
-	os.MkdirAll("storage/zip", 0755)
 	os.MkdirAll("storage/db", 0755)
 
 	fmt.Printf("[Server] 监听端口: %d\n", port)

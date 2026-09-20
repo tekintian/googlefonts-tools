@@ -48,7 +48,7 @@ COPY --from=builder /googlefonts-tools .
 COPY --from=envsubst-builder /usr/local/bin/envsubst /usr/local/bin/envsubst
 COPY storage/config.ini /app/config.ini.tpl
 
-RUN mkdir -p storage/db storage/cache storage/fonts storage/zip
+RUN mkdir -p storage/db storage/cache storage/c/d
 
 COPY <<'ENTRYEOF' /app/entrypoint.sh
 #!/bin/sh

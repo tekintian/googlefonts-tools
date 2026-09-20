@@ -9,9 +9,12 @@ import (
 )
 
 func GetPwd() string {
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0])) //当前程序运行目录获取
+	dir, err := os.Getwd()
 	if err != nil {
-		return ""
+		dir, err = filepath.Abs(filepath.Dir(os.Args[0]))
+		if err != nil {
+			return ""
+		}
 	}
 	return dir
 }
