@@ -20,9 +20,10 @@ func (rt *Router) Setup(engine *service.DownloadEngine) {
 	InitPageController(engine)
 
 	contentDir := utils.GetPwd() + "/" + service.ContentDir
-	fsHandler := http.StripPrefix("/c/", http.FileServer(http.Dir(contentDir)))
-	cacheHandler := StaticCacheMiddleware(fsHandler)
-	rt.mux.Handle("/c/", cacheHandler)
+	rt.mux.Handle("/c/", StaticCacheMiddleware(NoDirListing(http.StripPrefix("/c/", http.FileServer(http.Dir(contentDir))))))
+
+	assetsDir := utils.GetPwd() + "/storage/assets"
+	rt.mux.Handle("/assets/", StaticCacheMiddleware(NoDirListing(http.StripPrefix("/assets/", http.FileServer(http.Dir(assetsDir))))))
 
 	rt.mux.HandleFunc("/", CorsMiddleware(LoggingMiddleware(PageCtl.Index)))
 
@@ -92,4 +93,14 @@ func (rt *Router) handleTaskAPIRoutes(w http.ResponseWriter, r *http.Request) {
 
 func (rt *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	rt.mux.ServeHTTP(w, r)
+}
+
+func NoDirListing(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" || strings.HasSuffix(r.URL.Path, "/") {
+			http.NotFound(w, r)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }

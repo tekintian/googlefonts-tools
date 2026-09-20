@@ -9,7 +9,7 @@ const githubRepo = "https://github.com/tekintian/googlefonts-tools"
 const footerCSS = `.footer{margin-top:20px;padding-top:12px;border-top:1px solid #eee;font-size:12px;color:#aaa;text-align:center}.footer a{color:#667eea;text-decoration:none}.footer a:hover{text-decoration:underline}`
 
 func footerHTML() string {
-	return fmt.Sprintf(`<div class="footer"><a href="%s" target="_blank">GoogleFonts Tools v%s</a> · Powered by <a href="https://ai.tekin.cn/" target="_blank">Tekin</a></div>`, githubRepo, AppVer)
+	return fmt.Sprintf(`<div class="footer"><a href="%s" target="_blank">GoogleFonts Tools %s</a> · Powered by <a href="https://ai.tekin.cn/" target="_blank">Tekin</a></div>`, githubRepo, AppVer)
 }
 
 func indexHTML() string {
@@ -27,62 +27,105 @@ func indexHTML() string {
 <meta property="og:title" content="Google Fonts Download Tools">
 <meta property="og:description" content="在线下载 Google Fonts 字体文件并生成自托管 CSS，摆脱 CDN 依赖">
 <meta property="og:url" content="/">
+<meta property="og:image" content="/assets/img/logo.png">
+<link rel="icon" type="image/x-icon" href="/assets/img/favicon.ico">
+<link rel="apple-touch-icon" href="/assets/img/logo.png">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center}
-.container{background:#fff;border-radius:16px;padding:40px;max-width:640px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3)}
-h1{color:#333;font-size:24px;margin-bottom:8px}
-.subtitle{color:#888;font-size:14px;margin-bottom:24px}
-label{display:block;color:#555;font-weight:600;margin-bottom:8px;font-size:14px}
-input[type=text]{width:100%;padding:12px 16px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px;transition:border-color .3s;outline:none}
-input[type=text]:focus{border-color:#667eea}
-.btn{display:inline-block;padding:12px 24px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;width:100%;margin-top:16px;transition:transform .2s}
-.btn:hover{transform:translateY(-2px)}
-.btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
-.result{margin-top:20px;padding:16px;background:#f8f9fa;border-radius:8px;display:none}
-.result h3{color:#333;margin-bottom:12px;font-size:16px}
-.result a{color:#667eea;text-decoration:none;font-weight:600;word-break:break-all}
-.result a:hover{text-decoration:underline}
-.task-info{margin-top:8px;color:#666;font-size:13px}
-.recent{margin-top:24px;border-top:1px solid #eee;padding-top:16px}
-.recent h3{color:#555;font-size:14px;margin-bottom:8px}
-.recent-list{list-style:none}
-.recent-list li{padding:6px 0;font-size:13px}
-.recent-list a{color:#667eea;text-decoration:none}
-.recent-list a:hover{text-decoration:underline}
-` + footerCSS + `
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f0f1a;color:#e0e0e0;min-height:100vh}
+.hero{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);padding:60px 20px 40px;text-align:center}
+.hero-icon{width:64px;height:64px;margin-bottom:16px;display:inline-block;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.hero h1{font-size:32px;font-weight:800;background:linear-gradient(135deg,#89b4fa,#cba6f7,#f5c2e7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px;letter-spacing:-0.5px}
+.hero p{color:#a0a0b8;font-size:15px;max-width:480px;margin:0 auto;line-height:1.6}
+.main{max-width:720px;margin:0 auto;padding:0 20px}
+.input-card{background:#1e1e2e;border-radius:16px;padding:28px;margin-top:-24px;box-shadow:0 8px 32px rgba(0,0,0,.4);position:relative;z-index:1}
+.input-card label{display:block;color:#cdd6f4;font-weight:600;font-size:13px;margin-bottom:10px;letter-spacing:0.5px}
+.input-wrap{position:relative}
+.input-wrap input{width:100%;padding:14px 16px;background:#11111b;border:2px solid #313244;border-radius:10px;color:#cdd6f4;font-size:14px;transition:border-color .3s,box-shadow .3s;outline:none;font-family:'Fira Code',Consolas,monospace}
+.input-wrap input:focus{border-color:#89b4fa;box-shadow:0 0 0 3px rgba(137,180,250,.15)}
+.input-wrap input::placeholder{color:#585b70}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;margin-top:16px;background:linear-gradient(135deg,#89b4fa,#cba6f7);color:#1e1e2e;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:transform .2s,box-shadow .2s;letter-spacing:0.3px}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(137,180,250,.3)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.examples{margin-top:20px;padding-top:16px;border-top:1px solid #313244}
+.examples-title{color:#6c7086;font-size:12px;margin-bottom:10px;letter-spacing:0.5px}
+.example-list{display:flex;flex-direction:column;gap:6px}
+.example-item{padding:8px 12px;background:#11111b;border-radius:8px;cursor:pointer;transition:background .2s,border-color .2s;border:1px solid transparent;font-size:12px;color:#a6adc8;font-family:'Fira Code',Consolas,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.example-item:hover{background:#181825;border-color:#45475a;color:#cdd6f4}
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:32px;padding-bottom:8px}
+.feature{background:#1e1e2e;border-radius:12px;padding:20px;text-align:center;transition:transform .2s}
+.feature:hover{transform:translateY(-3px)}
+.feature-icon{font-size:28px;margin-bottom:10px}
+.feature h3{color:#cdd6f4;font-size:14px;font-weight:600;margin-bottom:6px}
+.feature p{color:#6c7086;font-size:12px;line-height:1.5}
+.result{margin-top:20px;padding:20px;background:#11111b;border:1px solid #313244;border-radius:12px;display:none}
+.result h3{color:#a6e3a1;font-size:15px;margin-bottom:14px;font-weight:600}
+.task-info{display:flex;align-items:baseline;padding:6px 0;font-size:13px;border-bottom:1px solid #1e1e2e}
+.task-info:last-child{border-bottom:none}
+.task-label{color:#6c7086;min-width:72px;flex-shrink:0}
+.task-value{color:#cdd6f4;flex:1;word-break:break-all}
+.task-value a{color:#89b4fa;text-decoration:none}
+.task-value a:hover{text-decoration:underline}
+.nav-links{display:flex;justify-content:center;gap:24px;margin-top:28px;padding-bottom:32px}
+.nav-links a{color:#6c7086;font-size:13px;text-decoration:none;transition:color .2s}
+.nav-links a:hover{color:#89b4fa}
+.footer{margin-top:0;padding:16px;text-align:center;font-size:12px;color:#45475a;border-top:1px solid #1e1e2e}
+.footer a{color:#585b70;text-decoration:none}
+.footer a:hover{color:#89b4fa;text-decoration:underline}
 </style>
 </head>
 <body>
-<div class="container">
-<h1>🔤 Google Fonts Download</h1>
-<p class="subtitle">输入 Google Fonts URL，异步下载字体文件并打包为 ZIP</p>
-<form id="form" onsubmit="return submitTask(event)">
-<label>Google Fonts URL</label>
-<input type="text" id="url" placeholder="https://fonts.googleapis.com/css?family=Open+Sans:400,700&display=swap" required>
-<button type="submit" class="btn" id="btn">提交下载任务</button>
-</form>
+<div class="hero">
+<div class="hero-icon"><img src="/assets/img/logo.png" alt="Logo" width="64" height="64"></div>
+<h1>Google Fonts Download</h1>
+<p>下载字体文件并生成自托管 CSS，一行代码替代 Google Fonts CDN</p>
+</div>
+<div class="main">
+<div class="input-card">
+<label>GOOGLE FONTS URL</label>
+<div class="input-wrap">
+<input type="text" id="url" placeholder="粘贴 Google Fonts URL..." required>
+</div>
+<button type="button" class="btn" id="btn" onclick="submitTask()">⬇ 下载字体</button>
+<div class="examples">
+<div class="examples-title">快速示例 — 点击自动填入</div>
+<div class="example-list">
+<div class="example-item" onclick="fillUrl(this.textContent)">https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap</div>
+<div class="example-item" onclick="fillUrl(this.textContent)">https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap</div>
+<div class="example-item" onclick="fillUrl(this.textContent)">https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap</div>
+</div>
+</div>
+</div>
 <div class="result" id="result">
 <h3>✅ 任务已提交</h3>
-<p class="task-info">字体: <strong id="fontName">-</strong></p>
-<p class="task-info">状态: <strong id="status">-</strong></p>
-<p class="task-info">永久链接: <a id="permalink" href="#">-</a></p>
-<p class="task-info" id="downloadRow" style="display:none">下载链接: <a id="downloadLink" href="#">点击下载 ZIP</a></p>
+<div class="task-info"><span class="task-label">字体</span><span class="task-value" id="fontName">-</span></div>
+<div class="task-info"><span class="task-label">状态</span><span class="task-value" id="status">-</span></div>
+<div class="task-info"><span class="task-label">永久链接</span><span class="task-value"><a id="permalink" href="#">-</a></span></div>
+<div class="task-info" id="downloadRow" style="display:none"><span class="task-label">下载</span><span class="task-value"><a id="downloadLink" href="#">点击下载 ZIP</a></span></div>
+</div>
+<div class="features">
+<div class="feature"><div class="feature-icon">📦</div><h3>ZIP 打包下载</h3><p>字体文件 + 自托管 CSS 一键打包</p></div>
+<div class="feature"><div class="feature-icon">🏠</div><h3>自托管 CSS</h3><p>本地相对路径，摆脱 CDN 依赖</p></div>
+<div class="feature"><div class="feature-icon">🔒</div><h3>协议自适应</h3><p>协议相对 URL，HTTP/HTTPS 通用</p></div>
+</div>
+<div class="nav-links">
+<a href="/recent">📋 最近下载</a>
+<a href="https://github.com/tekintian/googlefonts-tools/issues" target="_blank">📖 Issues</a>
+</div>
 </div>
 ` + footerHTML() + `
-<div style="text-align:center;margin-top:12px"><a href="/recent" style="color:#667eea;font-size:13px;text-decoration:none">📋 最近下载</a></div>
-</div>
 <script>
-function submitTask(e){
-e.preventDefault();
+function fillUrl(url){document.getElementById('url').value=url;document.getElementById('url').focus()}
+function submitTask(){
 var btn=document.getElementById('btn');
-btn.disabled=true;
-btn.textContent='提交中...';
-var url=document.getElementById('url').value;
+var url=document.getElementById('url').value.trim();
+if(!url){document.getElementById('url').focus();return}
+btn.disabled=true;btn.textContent='提交中...';
 fetch('/api/v1/tasks',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'url='+encodeURIComponent(url)})
 .then(r=>r.json())
 .then(data=>{
-if(data.code!==200){alert('Error: '+data.msg);btn.disabled=false;btn.textContent='提交下载任务';return}
+if(data.code!==200){alert('Error: '+data.msg);btn.disabled=false;btn.innerHTML='⬇ 下载字体';return}
 var d=data.data;
 document.getElementById('result').style.display='block';
 document.getElementById('fontName').textContent=d.font_name||'-';
@@ -90,18 +133,18 @@ document.getElementById('status').textContent=d.status;
 document.getElementById('permalink').textContent=d.permalink;
 document.getElementById('permalink').href=d.permalink;
 if(d.status==='success'){
-document.getElementById('downloadRow').style.display='block';
+document.getElementById('downloadRow').style.display='flex';
 document.getElementById('downloadLink').href=d.download_url;
 document.getElementById('status').textContent='✅ 已完成(缓存)';
 }else{
 document.getElementById('downloadRow').style.display='none';
 window.location.href=d.permalink;
 }
-btn.disabled=false;
-btn.textContent='提交下载任务';
+btn.disabled=false;btn.innerHTML='⬇ 下载字体';
 })
-.catch(err=>{alert('Request failed');btn.disabled=false;btn.textContent='提交下载任务'});
+.catch(err=>{alert('请求失败');btn.disabled=false;btn.innerHTML='⬇ 下载字体'});
 }
+document.getElementById('url').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();submitTask()}});
 </script>
 </body>
 </html>`
@@ -115,6 +158,7 @@ const progressHTML = `<!DOCTYPE html>
 <title>下载中 - %s - Google Fonts Tools</title>
 <meta name="description" content="%s 字体正在下载中，请稍候...">
 <meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/x-icon" href="/assets/img/favicon.ico">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%%,#764ba2 100%%);min-height:100vh;display:flex;align-items:center;justify-content:center}
@@ -177,6 +221,9 @@ const resultHTML = `<!DOCTYPE html>
 <meta property="og:type" content="article">
 <meta property="og:title" content="%s - 自托管字体下载完成">
 <meta property="og:description" content="下载 %s 字体文件并生成自托管 CSS，无需依赖 Google Fonts CDN">
+<meta property="og:image" content="/assets/img/logo.png">
+<link rel="icon" type="image/x-icon" href="/assets/img/favicon.ico">
+<link rel="apple-touch-icon" href="/assets/img/logo.png">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%%,#764ba2 100%%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
@@ -264,6 +311,7 @@ const errorHTML = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>下载失败 - %s | Google Fonts Tools</title>
 <meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/x-icon" href="/assets/img/favicon.ico">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%%,#764ba2 100%%);min-height:100vh;display:flex;align-items:center;justify-content:center}
@@ -299,6 +347,7 @@ const notFoundHTML = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>任务未找到 | Google Fonts Tools</title>
 <meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/x-icon" href="/assets/img/favicon.ico">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%%,#764ba2 100%%);min-height:100vh;display:flex;align-items:center;justify-content:center}
@@ -335,6 +384,9 @@ var recentHTML = `<!DOCTYPE html>
 <meta property="og:type" content="website">
 <meta property="og:title" content="最近下载 - Google Fonts Tools">
 <meta property="og:description" content="查看最近下载的 Google Fonts 字体列表，方便溯源和复用">
+<meta property="og:image" content="/assets/img/logo.png">
+<link rel="icon" type="image/x-icon" href="/assets/img/favicon.ico">
+<link rel="apple-touch-icon" href="/assets/img/logo.png">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%%,#764ba2 100%%);min-height:100vh;padding:20px}

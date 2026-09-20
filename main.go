@@ -19,10 +19,9 @@ import (
 	"github.com/tekintian/googlefonts-tools/utils/db"
 )
 
-const (
-	AppName    = "GoogleFonts Download Tools"
-	AppVersion = "2.3.0"
-)
+const AppName = "GoogleFonts Download Tools"
+
+var AppVersion = "vdev"
 
 func main() {
 	mode := flag.String("mode", "", "运行模式: server / download (也可用 -s / -d 简写)")
@@ -40,7 +39,7 @@ func main() {
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Printf("%s v%s\n", AppName, AppVersion)
+		fmt.Printf("%s %s\n", AppName, AppVersion)
 		return
 	}
 
@@ -139,7 +138,7 @@ func initNotifier(configFile string) *service.NotifyDispatcher {
 }
 
 func runCLIMode(url, urlFile, output string, engine *service.DownloadEngine, repo repository.TaskRepository, notifier *service.NotifyDispatcher) {
-	fmt.Printf("%s v%s - CLI模式\n", AppName, AppVersion)
+	fmt.Printf("%s %s - CLI模式\n", AppName, AppVersion)
 
 	var urls []string
 	if url != "" {
@@ -208,7 +207,7 @@ func runCLIMode(url, urlFile, output string, engine *service.DownloadEngine, rep
 }
 
 func runServerMode(host string, port, workers int, engine *service.DownloadEngine, repo repository.TaskRepository, notifier *service.NotifyDispatcher) {
-	fmt.Printf("%s v%s - Server模式\n", AppName, AppVersion)
+	fmt.Printf("%s %s - Server模式\n", AppName, AppVersion)
 
 	tm := service.NewTaskManager(repo, engine, notifier, workers)
 	tm.Start()
