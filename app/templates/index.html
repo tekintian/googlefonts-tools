@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Google Fonts Download Tools - 自托管 Web 字体下载与 CSS 生成</title>
+<meta name="description" content="在线下载 Google Fonts 字体文件并生成自托管 CSS，摆脱 CDN 依赖。支持异步下载、ZIP 打包、Nginx 静态直出、协议相对 URL 引用。">
+<meta name="keywords" content="Google Fonts,字体下载,自托管字体,self-host fonts,web fonts,font download,Google Fonts CDN,字体打包,woff2 download,CSS 生成">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://gf.tekin.cn/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Google Fonts Download Tools">
+<meta property="og:description" content="在线下载 Google Fonts 字体文件并生成自托管 CSS，摆脱 CDN 依赖">
+<meta property="og:url" content="https://gf.tekin.cn/">
+<meta property="og:image" content="/assets/img/logo.png">
+<link rel="icon" type="image/x-icon" href="/assets/img/favicon.ico">
+<link rel="apple-touch-icon" href="/assets/img/logo.png">
+<link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+<div class="hero">
+<div class="hero-icon"><img src="/assets/img/logo.png" alt="谷歌字体国内下载加载, 自托管 Web 字体下载与 CSS 生成 - Google Fonts Download" width="64" height="64"></div>
+<h1>Google Fonts Download</h1>
+<p>下载字体文件并生成自托管 CSS，一行代码替代 Google Fonts CDN</p>
+</div>
+<div class="main">
+<div class="input-card">
+<label>GOOGLE FONTS URL</label>
+<div class="input-wrap">
+<input type="text" id="url" placeholder="粘贴 Google Fonts URL，如 https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" required>
+</div>
+<button type="button" class="btn" id="btn" onclick="submitTask()">⬇ 下载字体</button>
+<div class="examples">
+<div class="examples-title">最近下载 — 点击查看详情 <span class="fright"><a href="/recent" target="_blank" class="more-links">更多</a></span></div>
+<div class="example-list">
+{{if .RecentItems}}
+{{range .RecentItems}}
+<a class="example-item" href="/d/{{.Sign}}"  target="_blank">{{.OriginalURL}}</a>
+{{end}}
+{{else}}
+<div class="example-item" style="cursor:default;color:#585b70">暂无下载记录</div>
+{{end}}
+</div>
+</div>
+</div>
+<div class="result" id="result">
+<h3>✅ 任务已提交</h3>
+<div class="task-info"><span class="task-label">字体</span><span class="task-value" id="fontName">-</span></div>
+<div class="task-info"><span class="task-label">状态</span><span class="task-value" id="status">-</span></div>
+<div class="task-info"><span class="task-label">永久链接</span><span class="task-value"><a id="permalink" href="#">-</a></span></div>
+<div class="task-info" id="downloadRow" style="display:none"><span class="task-label">下载</span><span class="task-value"><a id="downloadLink" href="#">点击下载 ZIP</a></span></div>
+</div>
+<div class="features">
+<div class="feature"><div class="feature-icon">📦</div><h3>ZIP 打包下载</h3><p>字体文件 + 自托管 CSS 一键打包</p></div>
+<div class="feature"><div class="feature-icon">🏠</div><h3>自托管 CSS</h3><p>本地相对路径，摆脱 CDN 依赖</p></div>
+<div class="feature"><div class="feature-icon">🔒</div><h3>协议自适应</h3><p>协议相对 URL，HTTP/HTTPS 通用</p></div>
+</div>
+<div class="nav-links">
+<a href="/recent">📋 最近下载</a>
+<a href="https://github.com/tekintian/googlefonts-tools/issues" target="_blank">📖 Issues</a>
+</div>
+</div>
+{{template "footer" .}}
+<script>
+function submitTask(){
+var btn=document.getElementById('btn');
+var url=document.getElementById('url').value.trim();
+if(!url){document.getElementById('url').focus();return}
+btn.disabled=true;btn.textContent='提交中...';
+fetch('/api/v1/tasks',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'url='+encodeURIComponent(url)})
+.then(r=>r.json())
+.then(data=>{
+if(data.code!==200){alert('Error: '+data.msg);btn.disabled=false;btn.innerHTML='⬇ 下载字体';return}
+var d=data.data;
+document.getElementById('result').style.display='block';
+document.getElementById('fontName').textContent=d.font_name||'-';
+document.getElementById('status').textContent=d.status;
+document.getElementById('permalink').textContent=d.permalink;
+document.getElementById('permalink').href=d.permalink;
+if(d.status==='success'){
+document.getElementById('downloadRow').style.display='flex';
+document.getElementById('downloadLink').href=d.download_url;
+document.getElementById('status').textContent='✅ 已完成(缓存)';
+}else{
+document.getElementById('downloadRow').style.display='none';
+window.location.href=d.permalink;
+}
+btn.disabled=false;btn.innerHTML='⬇ 下载字体';
+})
+.catch(err=>{alert('请求失败');btn.disabled=false;btn.innerHTML='⬇ 下载字体'});
+}
+document.getElementById('url').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();submitTask()}});
+</script>
+</body>
+</html>

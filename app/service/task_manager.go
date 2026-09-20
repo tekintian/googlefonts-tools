@@ -255,6 +255,10 @@ func (tm *TaskManager) ListTasks(offset, limit int) ([]*model.Task, error) {
 	return tm.repo.List(offset, limit)
 }
 
+func (tm *TaskManager) ListSuccessTasks(offset, limit int) ([]*model.Task, error) {
+	return tm.repo.GetByStatus(string(model.StatusSuccess), limit)
+}
+
 func (tm *TaskManager) IncrementDownloadCount(sign string) error {
 	return tm.repo.IncrementDownloadCount(sign)
 }

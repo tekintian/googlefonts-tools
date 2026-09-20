@@ -3,12 +3,14 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/tekintian/googlefonts-tools/app/model"
 	"github.com/tekintian/googlefonts-tools/app/service"
+	"github.com/tekintian/googlefonts-tools/app/templates"
 	"github.com/tekintian/googlefonts-tools/utils"
 )
 
@@ -26,8 +28,7 @@ func (pc *PageController) Index(w http.ResponseWriter, r *http.Request) {
 	urlParam := r.URL.Query().Get("url")
 	if urlParam != "" {
 		if !strings.Contains(urlParam, "fonts.googleapis.com") && !strings.Contains(urlParam, "fonts.gstatic.com") {
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.Write([]byte(indexHTML()))
+			templates.Render(w, "index.html", pc.buildIndexData())
 			return
 		}
 		tm := service.DefaultTaskManager
@@ -39,8 +40,29 @@ func (pc *PageController) Index(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write([]byte(indexHTML()))
+	templates.Render(w, "index.html", pc.buildIndexData())
+}
+
+func (pc *PageController) buildIndexData() templates.IndexData {
+	data := templates.IndexData{AppVer: templates.AppVer}
+	tm := service.DefaultTaskManager
+	if tm == nil {
+		return data
+	}
+	tasks, err := tm.ListSuccessTasks(0, 5)
+	if err != nil || len(tasks) == 0 {
+		return data
+	}
+	data.RecentItems = make([]templates.RecentItem, 0, len(tasks))
+	for _, t := range tasks {
+		data.RecentItems = append(data.RecentItems, templates.RecentItem{
+			FontName:    t.FontName,
+			OriginalURL: t.URL,
+			Sign:        t.Sign,
+			CreatedAt:   t.CreatedAt.Format("01-02 15:04"),
+		})
+	}
+	return data
 }
 
 func (pc *PageController) SignPage(w http.ResponseWriter, r *http.Request) {
@@ -54,12 +76,12 @@ func (pc *PageController) SignPage(w http.ResponseWriter, r *http.Request) {
 	task, _ := tm.GetTask(sign)
 
 	if task == nil {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprintf(w, notFoundHTML, sign, footerHTML())
+		templates.Render(w, "not_found.html", templates.NotFoundData{
+			AppVer: templates.AppVer,
+			Sign:   sign,
+		})
 		return
 	}
-
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 	switch task.Status {
 	case model.StatusSuccess:
@@ -78,29 +100,37 @@ func (pc *PageController) SignPage(w http.ResponseWriter, r *http.Request) {
 		}
 		cssLinkHref := fmt.Sprintf("//%s%s", r.Host, cssPath)
 		cssFullURL := fmt.Sprintf("%s://%s%s", scheme, r.Host, cssPath)
-		w.Write([]byte(fmt.Sprintf(resultHTML,
-			task.FontName, task.FontName, task.FontName,
-			sign, task.FontName, task.FontName,
-			task.FontName,
-			task.Sign, task.URL, task.URL,
-			sizeStr, durationStr, task.DownloadCount,
-			task.CreatedAt.Format("2006-01-02 15:04:05"),
-			zipURL, cssLinkHref, cssFullURL, cssFullURL,
-			sign, sign, footerHTML(),
-		)))
+		templates.Render(w, "result.html", templates.ResultData{
+			AppVer:        templates.AppVer,
+			FontName:      task.FontName,
+			Sign:          task.Sign,
+			URL:           task.URL,
+			Size:          sizeStr,
+			Duration:      durationStr,
+			DownloadCount: task.DownloadCount,
+			CreatedAt:     task.CreatedAt.Format("2006-01-02 15:04:05"),
+			ZipURL:        zipURL,
+			CSSLinkHref:   cssLinkHref,
+			CSSFullURL:    cssFullURL,
+		})
 
 	case model.StatusPending, model.StatusRunning:
-		fmt.Fprintf(w, progressHTML,
-			task.FontName, task.FontName, task.Progress,
-			task.FontName, sign,
-			task.Progress, task.DoneFiles, task.TotalFiles,
-			footerHTML(), sign,
-		)
+		templates.Render(w, "progress.html", templates.ProgressData{
+			AppVer:     templates.AppVer,
+			FontName:   task.FontName,
+			Sign:       sign,
+			Progress:   task.Progress,
+			DoneFiles:  task.DoneFiles,
+			TotalFiles: task.TotalFiles,
+		})
 
 	case model.StatusFailed:
-		fmt.Fprintf(w, errorHTML,
-			task.FontName, task.FontName, task.Sign, task.ErrorMsg, footerHTML(),
-		)
+		templates.Render(w, "error.html", templates.ErrorData{
+			AppVer:   templates.AppVer,
+			FontName: task.FontName,
+			Sign:     task.Sign,
+			ErrorMsg: task.ErrorMsg,
+		})
 	}
 }
 
@@ -195,48 +225,35 @@ func formatFileSize(size int64) string {
 
 func (pc *PageController) Recent(w http.ResponseWriter, r *http.Request) {
 	tm := service.DefaultTaskManager
-	tasks, _ := tm.ListTasks(0, 50)
-
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	tasks, _ := tm.ListSuccessTasks(0, 50)
 
 	if len(tasks) == 0 {
-		fmt.Fprintf(w, recentHTML, `<p class="empty">暂无下载记录</p><a href="/" class="back">🏠 返回首页</a>`)
+		templates.Render(w, "recent.html", templates.RecentData{
+			AppVer: templates.AppVer,
+			Rows:   template.HTML(`<p class="empty">暂无下载记录</p><a href="/" class="back">🏠 返回首页</a>`),
+		})
 		return
 	}
 
-	rows := `<table><tr><th>字体</th><th>Google URL</th><th>状态</th><th>大小</th><th>时间</th><th>操作</th></tr>`
+	rows := `<table><tr><th>字体</th><th>Google URL</th><th>大小</th><th>时间</th><th>操作</th></tr>`
 	for _, t := range tasks {
-		statusClass := "status-pending"
-		statusText := string(t.Status)
-		switch t.Status {
-		case model.StatusSuccess:
-			statusClass = "status-success"
-			statusText = "✅ 成功"
-		case model.StatusFailed:
-			statusClass = "status-failed"
-			statusText = "❌ 失败"
-		case model.StatusRunning:
-			statusClass = "status-running"
-			statusText = "⏳ 运行中"
-		case model.StatusPending:
-			statusClass = "status-pending"
-			statusText = "⏳ 等待中"
-		}
-
 		sizeStr := "-"
 		if t.ZipSize > 0 {
 			sizeStr = formatFileSize(t.ZipSize)
 		}
 
 		rows += fmt.Sprintf(
-			`<tr><td class="font-name">%s</td><td class="url-cell"><a href="%s" target="_blank">%s</a></td><td class="%s">%s</td><td>%s</td><td>%s</td><td><a href="/d/%s">查看</a></td></tr>`,
-			t.FontName, t.URL, t.URL, statusClass, statusText, sizeStr,
+			`<tr><td class="font-name">%s</td><td class="url-cell"><a href="%s" target="_blank">%s</a></td><td>%s</td><td>%s</td><td><a href="/d/%s">查看</a></td></tr>`,
+			t.FontName, t.URL, t.URL, sizeStr,
 			t.CreatedAt.Format("01-02 15:04"), t.Sign,
 		)
 	}
 	rows += `</table><a href="/" class="back">🏠 返回首页</a>`
 
-	fmt.Fprintf(w, recentHTML, rows)
+	templates.Render(w, "recent.html", templates.RecentData{
+		AppVer: templates.AppVer,
+		Rows:   template.HTML(rows),
+	})
 }
 
 func extractPathParam(path, prefix, suffix string) string {

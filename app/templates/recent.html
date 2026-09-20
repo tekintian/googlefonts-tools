@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>最近下载 - Google Fonts Download Tools</title>
+<meta name="description" content="查看最近下载的 Google Fonts 字体列表，包含原始 URL、下载状态和文件大小，方便溯源和复用">
+<meta name="keywords" content="Google Fonts,最近下载,字体下载记录,font download history">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="/recent">
+<meta property="og:type" content="website">
+<meta property="og:title" content="最近下载 - Google Fonts Tools">
+<meta property="og:description" content="查看最近下载的 Google Fonts 字体列表，方便溯源和复用">
+<meta property="og:image" content="/assets/img/logo.png">
+<link rel="icon" type="image/x-icon" href="/assets/img/favicon.ico">
+<link rel="apple-touch-icon" href="/assets/img/logo.png">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;padding:20px}
+.container{background:#fff;border-radius:16px;padding:32px;max-width:900px;margin:0 auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+h1{color:#333;font-size:22px;margin-bottom:20px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f8f9fa;color:#555;font-weight:600;padding:10px 8px;text-align:left;border-bottom:2px solid #eee}
+td{padding:10px 8px;border-bottom:1px solid #f0f0f0;color:#555;vertical-align:top}
+td a{color:#667eea;text-decoration:none;font-weight:500}
+td a:hover{text-decoration:underline}
+.font-name{font-weight:600;color:#333}
+.url-cell{max-width:320px;word-break:break-all;font-size:12px;color:#888}
+.url-cell a{color:#667eea}
+.status-success{color:#22c55e;font-weight:600}
+.status-failed{color:#ef4444;font-weight:600}
+.status-running{color:#f59e0b;font-weight:600}
+.status-pending{color:#94a3b8;font-weight:600}
+.empty{text-align:center;color:#aaa;padding:40px 0;font-size:16px}
+.back{display:inline-block;margin-top:16px;padding:10px 20px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;transition:transform .2s}
+.back:hover{transform:translateY(-2px)}
+.footer{margin-top:20px;padding-top:12px;border-top:1px solid #eee;font-size:12px;color:#aaa;text-align:center}.footer a{color:#667eea;text-decoration:none}.footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>📋 最近下载</h1>
+{{.Rows}}
+{{template "footer" .}}
+</div>
+</body>
+</html>

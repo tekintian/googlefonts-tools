@@ -15,6 +15,7 @@ import (
 	"github.com/tekintian/googlefonts-tools/app/model"
 	"github.com/tekintian/googlefonts-tools/app/repository"
 	"github.com/tekintian/googlefonts-tools/app/service"
+	"github.com/tekintian/googlefonts-tools/app/templates"
 	"github.com/tekintian/googlefonts-tools/utils"
 	"github.com/tekintian/googlefonts-tools/utils/db"
 )
@@ -84,7 +85,8 @@ func main() {
 
 	notifier := initNotifier(*configFile)
 
-	controller.AppVer = AppVersion
+	controller.SetAppVer(AppVersion)
+	templates.InitTemplates()
 
 	serverHost := envOr("GF_SERVER_HOST", utils.IniReadString(*configFile, "server", "host", "localhost"))
 

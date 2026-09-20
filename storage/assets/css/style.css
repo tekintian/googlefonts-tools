@@ -1,0 +1,44 @@
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f0f1a;color:#e0e0e0;min-height:100vh}
+.hero{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);padding:60px 20px 40px;text-align:center}
+.hero-icon{width:64px;height:64px;margin-bottom:16px;display:inline-block;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.hero h1{font-size:32px;font-weight:800;background:linear-gradient(135deg,#89b4fa,#cba6f7,#f5c2e7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px;letter-spacing:-0.5px}
+.hero p{color:#a0a0b8;font-size:15px;max-width:480px;margin:0 auto;line-height:1.6}
+.main{max-width:720px;margin:0 auto;padding:0 20px}
+.input-card{background:#1e1e2e;border-radius:16px;padding:28px;margin-top:-24px;box-shadow:0 8px 32px rgba(0,0,0,.4);position:relative;z-index:1}
+.input-card label{display:block;color:#cdd6f4;font-weight:600;font-size:13px;margin-bottom:10px;letter-spacing:0.5px}
+.input-wrap{position:relative}
+.input-wrap input{width:100%;padding:14px 16px;background:#11111b;border:2px solid #313244;border-radius:10px;color:#cdd6f4;font-size:14px;transition:border-color .3s,box-shadow .3s;outline:none;font-family:'Fira Code',Consolas,monospace}
+.input-wrap input:focus{border-color:#89b4fa;box-shadow:0 0 0 3px rgba(137,180,250,.15)}
+.input-wrap input::placeholder{color:#585b70}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;margin-top:16px;background:linear-gradient(135deg,#89b4fa,#cba6f7);color:#1e1e2e;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:transform .2s,box-shadow .2s;letter-spacing:0.3px}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(137,180,250,.3)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.examples{margin-top:20px;padding-top:16px;border-top:1px solid #313244}
+.examples-title{color:#6c7086;font-size:12px;margin-bottom:10px;letter-spacing:0.5px}
+.example-list{display:flex;flex-direction:column;gap:6px}
+.example-item{display:block;padding:8px 12px;background:#11111b;border-radius:8px;cursor:pointer;transition:background .2s,border-color .2s;border:1px solid transparent;font-size:12px;color:#a6adc8;font-family:'Fira Code',Consolas,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none}
+.example-item:hover{background:#181825;border-color:#45475a;color:#cdd6f4;text-decoration:none}
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:32px;padding-bottom:8px}
+.feature{background:#1e1e2e;border-radius:12px;padding:20px;text-align:center;transition:transform .2s}
+.feature:hover{transform:translateY(-3px)}
+.feature-icon{font-size:28px;margin-bottom:10px}
+.feature h3{color:#cdd6f4;font-size:14px;font-weight:600;margin-bottom:6px}
+.feature p{color:#6c7086;font-size:12px;line-height:1.5}
+.result{margin-top:20px;padding:20px;background:#11111b;border:1px solid #313244;border-radius:12px;display:none}
+.result h3{color:#a6e3a1;font-size:15px;margin-bottom:14px;font-weight:600}
+.task-info{display:flex;align-items:baseline;padding:6px 0;font-size:13px;border-bottom:1px solid #1e1e2e}
+.task-info:last-child{border-bottom:none}
+.task-label{color:#6c7086;min-width:72px;flex-shrink:0}
+.task-value{color:#cdd6f4;flex:1;word-break:break-all}
+.task-value a{color:#89b4fa;text-decoration:none}
+.task-value a:hover{text-decoration:underline}
+.nav-links{display:flex;justify-content:center;gap:24px;margin-top:28px;padding-bottom:32px}
+.nav-links a{color:#6c7086;font-size:13px;text-decoration:none;transition:color .2s}
+.nav-links a:hover{color:#89b4fa}
+.fright{float:right;display:inline-block}
+.more-links{color:#89b4fa;text-decoration:none}
+.footer{margin-top:0;padding:16px;text-align:center;font-size:12px;color:#45475a;border-top:1px solid #1e1e2e}
+.footer a{color:#585b70;text-decoration:none}
+.footer a:hover{color:#89b4fa;text-decoration:underline}
