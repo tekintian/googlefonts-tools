@@ -71,6 +71,7 @@ jobs:
 
           mkdir -p "$PACKAGE"
           cp "$CONFIG" "$DIST/config.ini"
+          cp -r storage/assets "$DIST/assets"
 
           for FILE in "$DIST"/*; do
             BASENAME=$(basename "$FILE")
@@ -79,15 +80,15 @@ jobs:
               *.exe)
                 NAME="${BASENAME%.exe}"
                 ARCHIVE="${PACKAGE}/${NAME}.zip"
-                (cd "$DIST" && zip -j "${GITHUB_WORKSPACE}/${ARCHIVE}" "$BASENAME" config.ini)
+                (cd "$DIST" && zip -r "${GITHUB_WORKSPACE}/${ARCHIVE}" "$BASENAME" config.ini assets/)
                 ;;
-              config.ini)
+              config.ini|assets)
                 continue
                 ;;
               *)
                 NAME="${BASENAME}"
                 ARCHIVE="${PACKAGE}/${NAME}.tar.gz"
-                (cd "$DIST" && tar czf "${GITHUB_WORKSPACE}/${ARCHIVE}" "$BASENAME" config.ini)
+                (cd "$DIST" && tar czf "${GITHUB_WORKSPACE}/${ARCHIVE}" "$BASENAME" config.ini assets/)
                 ;;
             esac
           done

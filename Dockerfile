@@ -45,6 +45,7 @@ LABEL maintainer="tekintian <tekintian@gmail.com>" \
 
 WORKDIR /app
 COPY --from=builder /googlefonts-tools .
+COPY --from=builder /src/storage/assets /app/storage/assets
 COPY --from=envsubst-builder /usr/local/bin/envsubst /usr/local/bin/envsubst
 COPY storage/config.ini /app/config.ini.tpl
 
